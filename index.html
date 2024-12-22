@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Betting Web App</title>
+  <style>
+    /* General Styling */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: #ffffff;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      padding: 20px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    h1 {
+      color: #333333;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #cccccc;
+      border-radius: 5px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #007bff;
+      color: #ffffff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .nav-buttons {
+      margin-top: 20px;
+    }
+
+    .nav-buttons button {
+      margin: 5px;
+    }
+
+    .leaderboard, .admin-panel {
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .leaderboard ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .leaderboard li {
+      padding: 10px 0;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .admin-panel label {
+      display: block;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Registration Screen -->
+    <div id="register-screen">
+      <h1>Register</h1>
+      <input type="text" id="nickname" placeholder="Enter your nickname">
+      <button onclick="registerUser()">Register</button>
+    </div>
+
+    <!-- Main Screen -->
+    <div id="main-screen" class="hidden">
+      <h1>Welcome <span id="display-nickname"></span>!</h1>
+      <p>Your Points: <span id="user-points"></span></p>
+      <div class="nav-buttons">
+        <button onclick="showLeaderboard()">Leaderboard</button>
+        <button onclick="showAdminPanel()">Admin Panel</button>
+      </div>
+
+      <!-- Leaderboard -->
+      <div id="leaderboard" class="leaderboard hidden">
+        <h2>Leaderboard</h2>
+        <ul id="leaderboard-list"></ul>
+      </div>
+
+      <!-- Admin Panel -->
+      <div id="admin-panel" class="admin-panel hidden">
+        <h2>Admin Panel</h2>
+        <label for="match-description">Match Description:</label>
+        <input type="text" id="match-description" placeholder="e.g., Team A vs Team B">
+        <label for="odds">Odds (e.g., Team A: 2.0, Team B: 1.5):</label>
+        <input type="text" id="odds" placeholder="e.g., Team A: 2.0, Team B: 1.5">
+        <button onclick="createMatch()">Create Match</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.16.0/firebase-app.js";
+    import { getDatabase, ref, set, get, update } from "https://www.gstatic.com/firebasejs/9.16.0/firebase-database.js";
+
+    const firebaseConfig = {
+    apiKey: "AIzaSyCgsq0LoqN-VEGhmKWK_iDQZ0GALlSMXVc",
+    authDomain: "stav4uk-6e77d.firebaseapp.com",
+    databaseURL: "https://stav4uk-6e77d-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "stav4uk-6e77d",
+    storageBucket: "stav4uk-6e77d.firebasestorage.app",
+    messagingSenderId: "431550164866",
+    appId: "1:431550164866:web:2055820a593eaf113e699b"
+  };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let currentUserId = null;
+
+    // Register User
+    window.registerUser = function () {
+      const nickname = document.getElementById('nickname').value.trim();
+      if (nickname === '') {
+        alert('Nickname cannot be empty!');
+        return;
+      }
+
+      const userId = Math.random().toString(36).substring(2, 10);
+      const userRef = ref(db, `users/${userId}`);
+
+      set(userRef, { nickname: nickname, points: 100 })
+        .then(() => {
+          currentUserId = userId;
+          loadMainScreen(nickname, 100);
+        })
+        .catch((error) => console.error("Error registering user:", error));
+    };
+
+    function loadMainScreen(nickname, points) {
+      document.getElementById('register-screen').classList.add('hidden');
+      document.getElementById('main-screen').classList.remove('hidden');
+      document.getElementById('display-nickname').textContent = nickname;
+      document.getElementById('user-points').textContent = points;
+    }
+
+    // Show Leaderboard
+    window.showLeaderboard = function () {
+      const leaderboard = document.getElementById('leaderboard');
+      const leaderboardList = document.getElementById('leaderboard-list');
+      leaderboardList.innerHTML = ''; // Clear list
+
+      const usersRef = ref(db, 'users');
+      get(usersRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          const users = snapshot.val();
+          const sortedUsers = Object.values(users).sort((a, b) => b.points - a.points);
+
+          sortedUsers.forEach((user) => {
+            const li = document.createElement('li');
+            li.textContent = `${user.nickname}: ${user.points} points`;
+            leaderboardList.appendChild(li);
+          });
+
+          leaderboard.classList.remove('hidden');
+        }
+      }).catch(console.error);
+    };
+
+    // Show Admin Panel
+    window.showAdminPanel = function () {
+      document.getElementById('admin-panel').classList.remove('hidden');
+    };
+
+    // Create Match (Admin Feature)
+    window.createMatch = function () {
+      const description = document.getElementById('match-description').value.trim();
+      const odds = document.getElementById('odds').value.trim();
+
+      if (description === '' || odds === '') {
+        alert('All fields are required!');
+        return;
+      }
+
+      const matchId = Math.random().toString(36).substring(2, 10);
+      const matchRef = ref(db, `bets/${matchId}`);
+
+      set(matchRef, { description: description, odds: odds, status: 'open' })
+        .then(() => {
+          alert('Match created successfully!');
+        })
+        .catch(console.error);
+    };
+  </script>
+</body>
+</html>
