@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Betting Web App</title>
+</head>
+<body>
+  <div id="register-screen">
+    <h1>Register</h1>
+    <input type="text" id="nickname" placeholder="Enter your nickname">
+    <button onclick="registerUser()">Register</button>
+  </div>
+
+  <div id="main-screen" style="display: none;">
+    <h1>Welcome <span id="display-nickname"></span>!</h1>
+    <p>Your Points: <span id="user-points"></span></p>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.16.0/firebase-app.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.16.0/firebase-database.js";
+
+    const firebaseConfig = {
+    apiKey: "AIzaSyCgsq0LoqN-VEGhmKWK_iDQZ0GALlSMXVc",
+    authDomain: "stav4uk-6e77d.firebaseapp.com",
+    databaseURL: "https://stav4uk-6e77d-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "stav4uk-6e77d",
+    storageBucket: "stav4uk-6e77d.firebasestorage.app",
+    messagingSenderId: "431550164866",
+    appId: "1:431550164866:web:2055820a593eaf113e699b"
+  };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Function to register a user
+    window.registerUser = function () {
+      const nickname = document.getElementById('nickname').value.trim();
+      if (nickname === '') {
+        alert('Nickname cannot be empty!');
+        return;
+      }
+
+      const userId = Math.random().toString(36).substring(2, 10); // Temporary unique ID
+      const userRef = ref(db, `users/${userId}`);
+
+      set(userRef, {
+        nickname: nickname,
+        points: 100 // Default points
+      })
+        .then(() => {
+          console.log("User registered successfully.");
+          loadMainScreen(nickname, 100);
+        })
+        .catch((error) => {
+          console.error("Error registering user:", error);
+        });
+    };
+
+    // Function to load the main screen
+    function loadMainScreen(nickname, points) {
+      document.getElementById('register-screen').style.display = 'none';
+      document.getElementById('main-screen').style.display = 'block';
+      document.getElementById('display-nickname').textContent = nickname;
+      document.getElementById('user-points').textContent = points;
+    }
+  </script>
+</body>
+</html>
