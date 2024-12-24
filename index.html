@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Betting App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        #mainScreen {
+            display: none;
+        }
+        #registerSection {
+            display: block;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="registerSection">
+        <h2>Register Your Nickname</h2>
+        <input type="text" id="nickname" placeholder="Enter your nickname">
+        <button id="registerBtn">Register</button>
+        <p id="errorMsg" style="color: red;"></p>
+    </div>
+
+    <div id="mainScreen" class="hidden">
+        <h2>Welcome <span id="nicknameDisplay"></span></h2>
+        <p>Points: <span id="pointsDisplay"></span></p>
+        <button onclick="showLeaderboard()">Leaderboard</button>
+        <button onclick="showBets()">Bets</button>
+    </div>
+
+    <div id="leaderboard" class="hidden">
+        <h2>Leaderboard</h2>
+        <div id="leaderboardList"></div>
+        <button onclick="showMainScreen()">Back</button>
+    </div>
+
+    <div id="bets" class="hidden">
+        <h2>Bets</h2>
+        <div id="betList"></div>
+        <button onclick="showMainScreen()">Back</button>
+    </div>
+
+    <script>
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
+        import { getDatabase, ref, set, get, child } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCgsq0LoqN-VEGhmKWK_iDQZ0GALlSMXVc",
+            authDomain: "stav4uk-6e77d.firebaseapp.com",
+            databaseURL: "https://stav4uk-6e77d-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "stav4uk-6e77d",
+            storageBucket: "stav4uk-6e77d.firebasestorage.app",
+            messagingSenderId: "431550164866",
+            appId: "1:431550164866:web:2055820a593eaf113e699b"
+        };
+  
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+
+        window.onload = function() {
+            const registerBtn = document.getElementById('registerBtn');
+            if (registerBtn) {
+                registerBtn.addEventListener('click', registerUser);
+            }
+        };
+
+        function registerUser() {
+            const nickname = document.getElementById('nickname').value;
+            if (!nickname) {
+                document.getElementById('errorMsg').innerText = "Please enter a nickname.";
+                return;
+            }
+
+            // Register the user with Firebase Auth
+            const user = auth.currentUser;
+            if (!user) {
+                auth.signInAnonymously()
+                    .then(() => {
+                        createUserInDatabase(nickname);
+                    })
+                    .catch(error => {
+                        document.getElementById('errorMsg').innerText = error.message;
+                    });
+            } else {
+                createUserInDatabase(nickname);
+            }
+        }
+
+        function createUserInDatabase(nickname) {
+            const user = auth.currentUser;
+            const userId = user.uid;
+
+            const userRef = db.ref('users/' + userId);
+            userRef.set({
+                nickname: nickname,
+                points: 100 // Default points for new users
+            })
+            .then(() => {
+                showMainScreen();
+            })
+            .catch((error) => {
+                document.getElementById('errorMsg').innerText = "Error registering user: " + error.message;
+            });
+        }
+
+        function showMainScreen() {
+            const user = auth.currentUser;
+            if (user) {
+                const userRef = db.ref('users/' + user.uid);
+                userRef.once('value').then((snapshot) => {
+                    const userData = snapshot.val();
+                    if (userData) {
+                        document.getElementById('nicknameDisplay').textContent = userData.nickname;
+                        document.getElementById('pointsDisplay').textContent = userData.points;
+                        document.getElementById('registerSection').classList.add('hidden');
+                        document.getElementById('mainScreen').classList.remove('hidden');
+                    }
+                });
+            }
+        }
+
+        function showLeaderboard() {
+            const leaderboardRef = db.ref('users');
+            leaderboardRef.orderByChild('points').limitToLast(10).once('value')
+                .then((snapshot) => {
+                    let leaderboardHTML = "<ul>";
+                    snapshot.forEach((childSnapshot) => {
+                        const user = childSnapshot.val();
+                        leaderboardHTML += `<li>${user.nickname}: ${user.points} points</li>`;
+                    });
+                    leaderboardHTML += "</ul>";
+                    document.getElementById('leaderboardList').innerHTML = leaderboardHTML;
+                    document.getElementById('mainScreen').classList.add('hidden');
+                    document.getElementById('leaderboard').classList.remove('hidden');
+                });
+        }
+
+        function showBets() {
+            const betsRef = db.ref('bets');
+            betsRef.once('value').then((snapshot) => {
+                let betsHTML = "<ul>";
+                snapshot.forEach((childSnapshot) => {
+                    const bet = childSnapshot.val();
+                    betsHTML += `<li>${bet.name} - ${bet.stake}</li>`;
+                });
+                betsHTML += "</ul>";
+                document.getElementById('betList').innerHTML = betsHTML;
+                document.getElementById('mainScreen').classList.add('hidden');
+                document.getElementById('bets').classList.remove('hidden');
+            });
+        }
+    </script>
+</body>
+</html>
