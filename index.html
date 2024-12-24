@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Betting Mini App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f4f4f9;
+            min-height: 100vh;
+        }
+        #app {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .hidden {
+            display: none;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="nickname-section">
+            <h2>Enter Your Nickname</h2>
+            <input type="text" id="nickname-input" placeholder="Nickname" />
+            <button id="start-button">Start</button>
+        </div>
+
+        <div id="betting-section" class="hidden">
+            <h2>Betting Section</h2>
+            <p id="points-display">Points: 0</p>
+            <div id="active-bet">
+                <p>No active bets currently.</p>
+            </div>
+            <div id="bet-form" class="hidden">
+                <h3>Place Your Bet</h3>
+                <button data-option="A" class="bet-option">Option A</button>
+                <button data-option="B" class="bet-option">Option B</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const startButton = document.getElementById('start-button');
+        const nicknameInput = document.getElementById('nickname-input');
+        const nicknameSection = document.getElementById('nickname-section');
+        const bettingSection = document.getElementById('betting-section');
+        const pointsDisplay = document.getElementById('points-display');
+        const activeBet = document.getElementById('active-bet');
+        const betForm = document.getElementById('bet-form');
+        const betOptions = document.querySelectorAll('.bet-option');
+
+        let points = 0;
+        let currentBet = null;
+
+        function setPoints(newPoints) {
+            points = newPoints;
+            pointsDisplay.textContent = `Points: ${points}`;
+        }
+
+        function showBettingSection() {
+            nicknameSection.classList.add('hidden');
+            bettingSection.classList.remove('hidden');
+        }
+
+        function createBet(adminBet) {
+            currentBet = adminBet;
+            activeBet.innerHTML = `
+                <h3>${adminBet.name}</h3>
+                <p>Option A: ${adminBet.coefficientA}</p>
+                <p>Option B: ${adminBet.coefficientB}</p>
+            `;
+            betForm.classList.remove('hidden');
+        }
+
+        function placeBet(option) {
+            if (!currentBet) return;
+
+            const betPoints = prompt('Enter points to bet:');
+            if (betPoints > points) {
+                alert('Not enough points!');
+                return;
+            }
+
+            setPoints(points - betPoints);
+            alert(`You placed ${betPoints} points on ${option}. Good luck!`);
+        }
+
+        // Initialize
+        startButton.addEventListener('click', () => {
+            const nickname = nicknameInput.value.trim();
+
+            if (!nickname) {
+                alert('Please enter a nickname.');
+                return;
+            }
+
+            setPoints(100); // Starter bonus
+            showBettingSection();
+        });
+
+        betOptions.forEach(button => {
+            button.addEventListener('click', () => {
+                const option = button.dataset.option;
+                placeBet(option);
+            });
+        });
+
+        // Example admin bet setup (mock, in real life fetched from backend)
+        setTimeout(() => {
+            createBet({
+                name: 'Who will win?',
+                coefficientA: 1.5,
+                coefficientB: 2.0
+            });
+        }, 2000);
+
+    </script>
+</body>
+</html>
