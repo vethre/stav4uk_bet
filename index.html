@@ -57,6 +57,8 @@
             <h3>Admin Panel</h3>
             <form id="admin-form" class="mb-3">
                 <input type="text" id="bet-name" class="form-control mb-2" placeholder="Bet Name">
+                <input type="text" id="option-a" class="form-control mb-2" placeholder="Option A Text">
+                <input type="text" id="option-b" class="form-control mb-2" placeholder="Option B Text">
                 <input type="number" id="coeff-a" class="form-control mb-2" placeholder="Coefficient A">
                 <input type="number" id="coeff-b" class="form-control mb-2" placeholder="Coefficient B">
                 <button type="submit" class="btn btn-success w-100">Create Bet</button>
@@ -78,6 +80,7 @@
 
         let points = 100; // Starter points
         let currentBet = null;
+        let betHistory = []; // Array to store past bets
 
         const adminIds = [700929765, 988127866]; // Replace with actual admin IDs
         const isAdmin = user && adminIds.includes(user.id);
@@ -91,10 +94,15 @@
             currentBet = adminBet;
             activeBet.innerHTML = `
                 <h4>${adminBet.name}</h4>
-                <p>Option A: ${adminBet.coefficientA}</p>
-                <p>Option B: ${adminBet.coefficientB}</p>
+                <p>${adminBet.optionA}: ${adminBet.coefficientA}</p>
+                <p>${adminBet.optionB}: ${adminBet.coefficientB}</p>
             `;
             betForm.classList.remove('hidden');
+        }
+
+        function saveBet(adminBet) {
+            betHistory.push(adminBet);
+            console.log('Bet saved:', adminBet);
         }
 
         function placeBet(option) {
@@ -137,19 +145,26 @@
             adminForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const betName = document.getElementById('bet-name').value;
+                const optionA = document.getElementById('option-a').value;
+                const optionB = document.getElementById('option-b').value;
                 const coeffA = parseFloat(document.getElementById('coeff-a').value);
                 const coeffB = parseFloat(document.getElementById('coeff-b').value);
 
-                if (!betName || isNaN(coeffA) || isNaN(coeffB)) {
+                if (!betName || !optionA || !optionB || isNaN(coeffA) || isNaN(coeffB)) {
                     alert('Please fill out all fields correctly.');
                     return;
                 }
 
-                createBet({
+                const newBet = {
                     name: betName,
+                    optionA: optionA,
+                    optionB: optionB,
                     coefficientA: coeffA,
                     coefficientB: coeffB
-                });
+                };
+
+                createBet(newBet);
+                saveBet(newBet);
                 alert('Bet created successfully!');
                 adminForm.reset();
             });
