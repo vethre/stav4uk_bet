@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Betting Mini App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        #app {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .hidden {
+            display: none;
+        }
+        .admin-section {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <div id="welcome-section" class="text-center">
+            <h2>Welcome!</h2>
+            <p id="welcome-message">Loading user information...</p>
+        </div>
+
+        <div id="betting-section" class="hidden">
+            <h2 class="text-center">Betting Section</h2>
+            <p id="points-display" class="text-center">Points: 0</p>
+            <div id="active-bet" class="mt-3 text-center">
+                <p>No active bets currently.</p>
+            </div>
+            <div id="bet-form" class="hidden mt-3">
+                <h3 class="text-center">Place Your Bet</h3>
+                <div class="d-flex justify-content-around mt-2">
+                    <button data-option="A" class="bet-option btn btn-primary">Option A</button>
+                    <button data-option="B" class="bet-option btn btn-secondary">Option B</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="admin-section" class="hidden admin-section">
+            <h3>Admin Panel</h3>
+            <form id="admin-form" class="mb-3">
+                <input type="text" id="bet-name" class="form-control mb-2" placeholder="Bet Name">
+                <input type="number" id="coeff-a" class="form-control mb-2" placeholder="Coefficient A">
+                <input type="number" id="coeff-b" class="form-control mb-2" placeholder="Coefficient B">
+                <button type="submit" class="btn btn-success w-100">Create Bet</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        const user = tg.initDataUnsafe?.user;
+
+        const pointsDisplay = document.getElementById('points-display');
+        const activeBet = document.getElementById('active-bet');
+        const betForm = document.getElementById('bet-form');
+        const betOptions = document.querySelectorAll('.bet-option');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const adminSection = document.getElementById('admin-section');
+        const adminForm = document.getElementById('admin-form');
+
+        let points = 100; // Starter points
+        let currentBet = null;
+
+        const adminIds = [700929765, 988127866]; // Replace with actual admin IDs
+        const isAdmin = user && adminIds.includes(user.id);
+
+        function setPoints(newPoints) {
+            points = newPoints;
+            pointsDisplay.textContent = `Points: ${points}`;
+        }
+
+        function createBet(adminBet) {
+            currentBet = adminBet;
+            activeBet.innerHTML = `
+                <h4>${adminBet.name}</h4>
+                <p>Option A: ${adminBet.coefficientA}</p>
+                <p>Option B: ${adminBet.coefficientB}</p>
+            `;
+            betForm.classList.remove('hidden');
+        }
+
+        function placeBet(option) {
+            if (!currentBet) return;
+
+            const betPoints = parseInt(prompt('Enter points to bet:'), 10);
+            if (isNaN(betPoints) || betPoints <= 0) {
+                alert('Invalid points entered.');
+                return;
+            }
+            if (betPoints > points) {
+                alert('Not enough points!');
+                return;
+            }
+
+            setPoints(points - betPoints);
+            alert(`You placed ${betPoints} points on ${option}. Good luck!`);
+        }
+
+        // Initialize
+        if (user) {
+            const displayName = user.username || `${user.first_name} ${user.last_name || ''}`;
+            welcomeMessage.textContent = `Welcome, ${displayName}!`;
+        } else {
+            welcomeMessage.textContent = 'Unable to retrieve user information.';
+        }
+
+        setPoints(100); // Starter bonus
+
+        betOptions.forEach(button => {
+            button.addEventListener('click', () => {
+                const option = button.dataset.option;
+                placeBet(option);
+            });
+        });
+
+        if (isAdmin) {
+            adminSection.classList.remove('hidden');
+
+            adminForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const betName = document.getElementById('bet-name').value;
+                const coeffA = parseFloat(document.getElementById('coeff-a').value);
+                const coeffB = parseFloat(document.getElementById('coeff-b').value);
+
+                if (!betName || isNaN(coeffA) || isNaN(coeffB)) {
+                    alert('Please fill out all fields correctly.');
+                    return;
+                }
+
+                createBet({
+                    name: betName,
+                    coefficientA: coeffA,
+                    coefficientB: coeffB
+                });
+                alert('Bet created successfully!');
+                adminForm.reset();
+            });
+        }
+    </script>
+</body>
+</html>
