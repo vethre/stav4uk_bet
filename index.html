@@ -83,12 +83,26 @@
         }
 
         function createBet(adminBet) {
+            localStorage.setItem('currentBet', JSON.stringify(adminBet));
             currentBet = adminBet;
             activeBet.innerHTML = `
                 <h4>${adminBet.name}</h4>
                 <p>${adminBet.optionAText}: ${adminBet.coefficientA}</p>
                 <p>${adminBet.optionBText}: ${adminBet.coefficientB}</p>
             `;
+        }
+
+        function loadBet() {
+            const betData = localStorage.getItem('currentBet');
+            if (betData) {
+                const adminBet = JSON.parse(betData);
+                activeBet.innerHTML = `
+                    <h4>${adminBet.name}</h4>
+                    <p>${adminBet.optionAText}: ${adminBet.coefficientA}</p>
+                    <p>${adminBet.optionBText}: ${adminBet.coefficientB}</p>
+                `;
+                document.getElementById('betting-section').classList.remove('hidden');
+            }
         }
 
         if (user) {
@@ -99,6 +113,7 @@
         }
 
         setPoints(100); // Starter bonus
+        loadBet();
 
         if (isAdmin) {
             adminSection.classList.remove('hidden');
