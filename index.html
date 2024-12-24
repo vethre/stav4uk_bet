@@ -44,13 +44,6 @@
             <div id="active-bet" class="mt-3 text-center">
                 <p>No active bets currently.</p>
             </div>
-            <div id="bet-form" class="hidden mt-3">
-                <h3 class="text-center">Place Your Bet</h3>
-                <div class="d-flex justify-content-around mt-2">
-                    <button data-option="A" class="bet-option btn btn-primary">Option A</button>
-                    <button data-option="B" class="bet-option btn btn-secondary">Option B</button>
-                </div>
-            </div>
         </div>
 
         <div id="admin-section" class="hidden admin-section">
@@ -59,8 +52,8 @@
                 <input type="text" id="bet-name" class="form-control mb-2" placeholder="Bet Name">
                 <input type="text" id="option-a" class="form-control mb-2" placeholder="Option A Text">
                 <input type="text" id="option-b" class="form-control mb-2" placeholder="Option B Text">
-                <input type="number" id="coeff-a" class="form-control mb-2" placeholder="Coefficient A">
-                <input type="number" id="coeff-b" class="form-control mb-2" placeholder="Coefficient B">
+                <input type="number" id="coeff-a" step="0.01" class="form-control mb-2" placeholder="Coefficient A">
+                <input type="number" id="coeff-b" step="0.01" class="form-control mb-2" placeholder="Coefficient B">
                 <button type="submit" class="btn btn-success w-100">Create Bet</button>
             </form>
         </div>
@@ -72,17 +65,13 @@
 
         const pointsDisplay = document.getElementById('points-display');
         const activeBet = document.getElementById('active-bet');
-        const betForm = document.getElementById('bet-form');
-        const betOptions = document.querySelectorAll('.bet-option');
         const welcomeMessage = document.getElementById('welcome-message');
         const adminSection = document.getElementById('admin-section');
         const adminForm = document.getElementById('admin-form');
 
         let points = 100; // Starter points
         let currentBet = null;
-        let betHistory = []; // Array to store past bets
-
-        const adminIds = [700929765, 988127866]; // Replace with actual admin IDs
+        const adminIds = [12345678, 87654321]; // Replace with actual admin IDs
         const isAdmin = user && adminIds.includes(user.id);
 
         function setPoints(newPoints) {
@@ -94,35 +83,11 @@
             currentBet = adminBet;
             activeBet.innerHTML = `
                 <h4>${adminBet.name}</h4>
-                <p>${adminBet.optionA}: ${adminBet.coefficientA}</p>
-                <p>${adminBet.optionB}: ${adminBet.coefficientB}</p>
+                <p>${adminBet.optionAText}: ${adminBet.coefficientA}</p>
+                <p>${adminBet.optionBText}: ${adminBet.coefficientB}</p>
             `;
-            betForm.classList.remove('hidden');
         }
 
-        function saveBet(adminBet) {
-            betHistory.push(adminBet);
-            console.log('Bet saved:', adminBet);
-        }
-
-        function placeBet(option) {
-            if (!currentBet) return;
-
-            const betPoints = parseInt(prompt('Enter points to bet:'), 10);
-            if (isNaN(betPoints) || betPoints <= 0) {
-                alert('Invalid points entered.');
-                return;
-            }
-            if (betPoints > points) {
-                alert('Not enough points!');
-                return;
-            }
-
-            setPoints(points - betPoints);
-            alert(`You placed ${betPoints} points on ${option}. Good luck!`);
-        }
-
-        // Initialize
         if (user) {
             const displayName = user.username || `${user.first_name} ${user.last_name || ''}`;
             welcomeMessage.textContent = `Welcome, ${displayName}!`;
@@ -132,39 +97,31 @@
 
         setPoints(100); // Starter bonus
 
-        betOptions.forEach(button => {
-            button.addEventListener('click', () => {
-                const option = button.dataset.option;
-                placeBet(option);
-            });
-        });
-
         if (isAdmin) {
             adminSection.classList.remove('hidden');
 
             adminForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const betName = document.getElementById('bet-name').value;
-                const optionA = document.getElementById('option-a').value;
-                const optionB = document.getElementById('option-b').value;
+                const optionAText = document.getElementById('option-a').value;
+                const optionBText = document.getElementById('option-b').value;
                 const coeffA = parseFloat(document.getElementById('coeff-a').value);
                 const coeffB = parseFloat(document.getElementById('coeff-b').value);
 
-                if (!betName || !optionA || !optionB || isNaN(coeffA) || isNaN(coeffB)) {
+                if (!betName || !optionAText || !optionBText || isNaN(coeffA) || isNaN(coeffB)) {
                     alert('Please fill out all fields correctly.');
                     return;
                 }
 
                 const newBet = {
                     name: betName,
-                    optionA: optionA,
-                    optionB: optionB,
+                    optionAText: optionAText,
+                    optionBText: optionBText,
                     coefficientA: coeffA,
                     coefficientB: coeffB
                 };
 
                 createBet(newBet);
-                saveBet(newBet);
                 alert('Bet created successfully!');
                 adminForm.reset();
             });
