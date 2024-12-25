@@ -140,45 +140,56 @@
 
             // Admin - Create a new bet
             const adminForm = document.getElementById('admin-form');
+            if (adminForm) {
             adminForm.addEventListener('submit', (e) => {
-                e.preventDefault();  // Prevent form from reloading the page
+                e.preventDefault();  // Prevent page reload
+
+                // Log that the event was triggered
+                console.log("Create Bet Form Submitted");
 
                 const betName = document.getElementById('bet-name').value;
                 const optionAText = document.getElementById('option-a').value;
                 const optionBText = document.getElementById('option-b').value;
 
-                // Validate the inputs
+                // Log the input values
+                console.log("Bet Name:", betName);
+                console.log("Option A Text:", optionAText);
+                console.log("Option B Text:", optionBText);
+
+                // Validate inputs
                 if (!betName || !optionAText || !optionBText) {
                     alert('Please fill in all fields.');
                     return;
                 }
 
-                // Create the bet object
                 const newBet = {
                     name: betName,
                     optionAText,
                     optionBText,
                     coefficientA: 1.0,  // Default coefficient
-                    coefficientB: 1.0,  // Default coefficient
-                    optionA_bets: 0,    // Initial bet count
-                    optionB_bets: 0     // Initial bet count
+                    coefficientB: 1.0,
+                    optionA_bets: 0,
+                    optionB_bets: 0
                 };
 
-                // Get a reference to the Firebase database for 'bets'
+                // Create a reference to the 'bets' node in Firebase
                 const betsRef = ref(db, 'bets');
-                
+
                 // Push the new bet to Firebase
-                set(push(betsRef), newBet)
+                push(betsRef, newBet)
                     .then(() => {
                         console.log('New bet created successfully!');
                         alert('Bet created!');
-                        adminForm.reset();  // Reset the form after successful submission
+                        adminForm.reset();  // Reset form on success
                     })
                     .catch((error) => {
                         console.error('Error creating bet:', error);
                         alert('Error creating bet: ' + error.message);
                     });
             });
+        } else {
+            console.log("Admin form element not found.");
+        }
 
             // Function to load bets
             function loadBets() {
