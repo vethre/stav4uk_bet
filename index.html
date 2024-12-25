@@ -289,24 +289,10 @@
                         if (snapshot.exists()) {
                             alert('You have already placed a bet for this match!');
                         } else {
-                            const pointsToBet = parseInt(prompt('Enter the number of points to bet:'), 10);
-
-                            if (userData.points === undefined) {
-                                userData.points = 1000; // Default value if points are not found
-                                set(userRef, userData).then(() => {
-                                    console.log('Points initialized to 1000.');
-                                });
-                            }
-
-                            if (!pointsToBet || pointsToBet <= 0) {
-                                alert('Invalid points value.');
-                                return;
-                            }
-
                             // Get user's points from the database
                             const userRef = ref(db, `users/${userId}`);
                             get(userRef).then((userSnapshot) => {
-                                const userData = userSnapshot.val();
+                                const userData = userSnapshot.val();  // Retrieve user data here
 
                                 if (!userData) {
                                     alert('User data not found.');
@@ -317,6 +303,22 @@
                                 console.log('User data:', userData);
                                 console.log('User points:', userData.points);
 
+                                if (userData.points === undefined) {
+                                    userData.points = 1000;  // Default value if points are not found
+                                    set(userRef, userData).then(() => {
+                                        console.log('Points initialized to 1000.');
+                                    });
+                                }
+
+                                // Prompt for points to bet
+                                const pointsToBet = parseInt(prompt('Enter the number of points to bet:'), 10);
+
+                                if (!pointsToBet || pointsToBet <= 0) {
+                                    alert('Invalid points value.');
+                                    return;
+                                }
+
+                                // Check if the user has enough points
                                 if (isNaN(userData.points) || userData.points < pointsToBet) {
                                     alert('You do not have enough points or points value is invalid.');
                                     return;
@@ -367,6 +369,8 @@
                                     .catch((error) => {
                                         console.error('Error placing bet:', error);
                                     });
+                            }).catch(error => {
+                                console.error('Error getting user data:', error.message);
                             });
                         }
                     });
