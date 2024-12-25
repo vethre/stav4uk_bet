@@ -95,7 +95,7 @@
             const usersRef = ref(db, 'users');
             const userRef = ref(db, 'users/' + userId);
 
-            userRef.once('value', snapshot => {
+            get(userRef).then(snapshot => {
                 const userData = snapshot.val();
                 if (userData && userData.nickname) {
                     // If nickname exists, show betting section
