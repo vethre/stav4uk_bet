@@ -300,13 +300,32 @@
                             const userRef = ref(db, `users/${userId}`);
                             get(userRef).then((userSnapshot) => {
                                 const userData = userSnapshot.val();
-                                if (userData.points < pointsToBet) {
-                                    alert('You do not have enough points!');
+
+                                if (!userData) {
+                                    alert('User data not found.');
+                                    return;
+                                }
+
+                                // Log user data and points for debugging
+                                console.log('User data:', userData);
+                                console.log('User points:', userData.points);
+
+                                if (isNaN(userData.points) || userData.points < pointsToBet) {
+                                    alert('You do not have enough points or points value is invalid.');
                                     return;
                                 }
 
                                 // Deduct points and place the bet
-                                set(userRef, { ...userData, points: userData.points - pointsToBet })
+                                const updatedUserData = { ...userData, points: userData.points - pointsToBet };
+
+                                // Ensure points are valid before updating
+                                if (isNaN(updatedUserData.points) || updatedUserData.points < 0) {
+                                    alert('Invalid points value after deduction.');
+                                    return;
+                                }
+
+                                // Update user points in Firebase
+                                set(userRef, updatedUserData)
                                     .then(() => {
                                         console.log('Points deducted successfully.');
                                         return get(betRef);
