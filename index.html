@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Betting Mini App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            align-items: flex-start;
+        }
+        #app {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="nickname-section" class="text-center">
+            <h2>Welcome to the Betting App!</h2>
+            <p>Please enter your nickname to get started.</p>
+            <input type="text" id="nickname-input" placeholder="Enter your nickname" class="form-control mb-2">
+            <button id="nickname-submit" class="btn btn-primary w-100">Submit</button>
+        </div>
+
+        <div id="betting-section" class="hidden">
+            <h2>Bets</h2>
+            <div id="bets-list">Loading...</div>
+        </div>
+
+        <div id="admin-section" class="hidden">
+            <h3>Admin Panel</h3>
+            <form id="admin-form">
+                <input type="text" id="bet-name" placeholder="Bet Name" class="form-control mb-2">
+                <input type="text" id="option-a" placeholder="Option A Text" class="form-control mb-2">
+                <input type="text" id="option-b" placeholder="Option B Text" class="form-control mb-2">
+                <button type="submit" class="btn btn-success w-100">Create Bet</button>
+            </form>
+        </div>
+
+        <div id="user-info" class="mb-3 text-center">
+            <h4 id="nickname-display"></h4>
+            <p id="points-display">Points: 0</p>
+        </div>
+
+        <div id="admin-tools" class="hidden">
+            <h3>Admin Tools</h3>
+            <button onclick="viewUsers()" class="btn btn-primary mb-2">View All Users</button>
+            <button onclick="adjustPoints(prompt('User ID:'), parseInt(prompt('Points to add:'), 10))" class="btn btn-warning mb-2">Adjust Points</button>
+            <button onclick="deleteBet(prompt('Bet ID:'))" class="btn btn-danger mb-2">Delete Bet</button>
+        </div>        
+        
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
+        import { getDatabase, ref, push, set, get, child } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+        // Wait until the DOM is fully loaded
+        window.addEventListener('DOMContentLoaded', (event) => {
+            // Initialize Firebase
+            const firebaseConfig = {
+                apiKey: "AIzaSyCgsq0LoqN-VEGhmKWK_iDQZ0GALlSMXVc",
+                authDomain: "stav4uk-6e77d.firebaseapp.com",
+                databaseURL: "https://stav4uk-6e77d-default-rtdb.europe-west1.firebasedatabase.app",
+                projectId: "stav4uk-6e77d",
+                storageBucket: "stav4uk-6e77d.firebasestorage.app",
+                messagingSenderId: "431550164866",
+                appId: "1:431550164866:web:2055820a593eaf113e699b"
+            };
+            const app = initializeApp(firebaseConfig);
+            const db = getDatabase(app);
+
+            // Telegram WebApp
+            const tg = window.Telegram.WebApp;
+            const user = tg.initDataUnsafe?.user;
+            const userId = user?.id;
+            const adminIds = [700929765];  // Replace with actual admin user IDs
+            const isAdmin = adminIds.includes(userId);
+
+            // DOM Elements
+            const nicknameSection = document.getElementById('nickname-section');
+            const bettingSection = document.getElementById('betting-section');
+            const adminSection = document.getElementById('admin-section');
+            const nicknameInput = document.getElementById('nickname-input');
+            const nicknameSubmit = document.getElementById('nickname-submit');
+            const betsList = document.getElementById('bets-list');
+            const betNameInput = document.getElementById('bet-name');
+            const optionAInput = document.getElementById('option-a');
+            const optionBInput = document.getElementById('option-b');
+
+            // Check if user nickname exists in the database
+            const usersRef = ref(db, 'users');
+            const userRef = ref(db, 'users/' + userId);
+            const adminNicknames = ['vethre', 'vether'];
+
+            get(userRef).then(snapshot => {
+                const userData = snapshot.val();
+                if (userData && userData.nickname) {
+                    // If nickname exists, show betting section
+                    nicknameSection.classList.add('hidden');
+                    bettingSection.classList.remove('hidden');
+                    if (isAdmin) adminSection.classList.remove('hidden');
+                    loadBets();
+                } else {
+                    // If nickname doesn't exist, ask for it
+                    nicknameSection.classList.remove('hidden');
+                    bettingSection.classList.add('hidden');
+                }
+            });
+
+            function updateUserInfo() {
+                get(userRef).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const userData = snapshot.val();
+                        document.getElementById('nickname-display').textContent = `Nickname: ${userData.nickname}`;
+                        document.getElementById('points-display').textContent = `Points: ${userData.points}`;
+                    } else {
+                        // Initialize user with default points
+                        set(userRef, { nickname: user.first_name, points: 1000 });
+                        updateUserInfo(); // Call again to display the new data
+                    }
+                });
+            }
+
+            updateUserInfo();
+
+            if (isAdmin) {
+                document.getElementById('admin-tools').classList.remove('hidden');
+            }
+
+            // Save nickname to Firebase
+            nicknameSubmit.addEventListener('click', () => {
+                const nickname = nicknameInput.value.trim();
+                if (nickname) {
+                    const userRef = ref(db, 'users/' + userId);
+                    set(userRef, { nickname })
+                        .then(() => {
+                            console.log('Nickname saved successfully'); // Log success
+                            nicknameSection.classList.add('hidden');
+                            bettingSection.classList.remove('hidden');
+                            loadBets();
+                        })
+                        .catch((error) => {
+                            console.log('Error saving nickname:', error.message); // Log error
+                        });
+                } else {
+                    alert('Please enter a valid nickname');
+                }
+            });
+
+            function checkAdminAccess(nickname) {
+                if (adminNicknames.includes(nickname)) {
+                    adminSection.classList.remove('hidden');
+                } else {
+                    adminSection.classList.add('hidden');
+                }
+            }
+
+            // Admin - Create a new bet
+            const adminForm = document.getElementById('admin-form');
+            if (adminForm) {
+            adminForm.addEventListener('submit', (e) => {
+                e.preventDefault();  // Prevent page reload
+
+                // Log that the event was triggered
+                console.log("Create Bet Form Submitted");
+
+                const betName = document.getElementById('bet-name').value;
+                const optionAText = document.getElementById('option-a').value;
+                const optionBText = document.getElementById('option-b').value;
+
+                // Log the input values
+                console.log("Bet Name:", betName);
+                console.log("Option A Text:", optionAText);
+                console.log("Option B Text:", optionBText);
+
+                // Validate inputs
+                if (!betName || !optionAText || !optionBText) {
+                    alert('Please fill in all fields.');
+                    return;
+                }
+
+                const newBet = {
+                    name: betName,
+                    optionAText,
+                    optionBText,
+                    coefficientA: 1.0,  // Default coefficient
+                    coefficientB: 1.0,
+                    optionA_bets: 0,
+                    optionB_bets: 0
+                };
+
+                // Create a reference to the 'bets' node in Firebase
+                const betsRef = ref(db, 'bets');
+
+                // Push the new bet to Firebase
+                push(betsRef, newBet)
+                    .then(() => {
+                        console.log('New bet created successfully!');
+                        alert('Bet created!');
+                        adminForm.reset();  // Reset form on success
+                    })
+                    .catch((error) => {
+                        console.error('Error creating bet:', error);
+                        alert('Error creating bet: ' + error.message);
+                    });
+            });
+        } else {
+            console.log("Admin form element not found.");
+        }
+
+            // Function to load bets
+            function loadBets() {
+                const betsRef = ref(db, 'bets');
+                get(betsRef).then(snapshot => {
+                    if (snapshot.exists()) {
+                        const bets = snapshot.val();
+                        betsList.innerHTML = '';
+                        Object.keys(bets).forEach(betId => {
+                            const bet = bets[betId];
+                            const betElement = document.createElement('div');
+                            betElement.innerHTML = `
+                                <div class="bet">
+                                    <h4>${bet.name}</h4>
+                                    <p>Option A: ${bet.optionAText} (Coef: ${bet.coefficientA})</p>
+                                    <p>Option B: ${bet.optionBText} (Coef: ${bet.coefficientB})</p>
+                                    <button onclick="placeBet('${betId}', 'A')">Bet A</button>
+                                    <button onclick="placeBet('${betId}', 'B')">Bet B</button>
+                                </div>
+                            `;
+                            betsList.appendChild(betElement);
+                        });
+                    } else {
+                        betsList.innerHTML = 'No bets available';
+                    }
+                });
+            }
+
+            function adjustPoints(userId, points) {
+                const targetUserRef = ref(db, `users/${userId}`);
+                get(targetUserRef).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const userData = snapshot.val();
+                        set(targetUserRef, { ...userData, points: userData.points + points });
+                        alert('Points adjusted successfully!');
+                    } else {
+                        alert('User not found.');
+                    }
+                });
+            }
+
+            function viewUsers() {
+                const usersRef = ref(db, 'users');
+                get(usersRef).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        console.log(snapshot.val());
+                        alert('Check console for user data.');
+                    } else {
+                        alert('No users found.');
+                    }
+                });
+            }
+
+
+
+
+            // Place bet function
+            function placeBet(betId, option) {
+                const betRef = ref(db, `bets/${betId}`);
+                const userBetRef = ref(db, `bets/${betId}/user_bets/${user.id}`);
+
+                get(userBetRef).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        alert('You have already placed a bet for this match!');
+                    } else {
+                        const pointsToBet = parseInt(prompt('Enter the number of points to bet:'), 10);
+
+                        if (!pointsToBet || pointsToBet <= 0) {
+                            alert('Invalid points value.');
+                            return;
+                        }
+
+                        // Check if the user has enough points
+                        get(userRef).then((userSnapshot) => {
+                            const userData = userSnapshot.val();
+                            if (userData.points < pointsToBet) {
+                                alert('You do not have enough points!');
+                                return;
+                            }
+
+                            // Place the bet and update points
+                            set(userBetRef, { option, points: pointsToBet });
+                            set(userRef, { ...userData, points: userData.points - pointsToBet });
+
+                            // Update the bet counts and coefficients
+                            get(betRef).then((betSnapshot) => {
+                                const betData = betSnapshot.val();
+                                const updatedBet = { ...betData };
+                                if (option === 'A') {
+                                    updatedBet.optionA_bets += pointsToBet;
+                                } else {
+                                    updatedBet.optionB_bets += pointsToBet;
+                                }
+                                updatedBet.coefficientA = (updatedBet.optionA_bets + updatedBet.optionB_bets) / updatedBet.optionA_bets;
+                                updatedBet.coefficientB = (updatedBet.optionA_bets + updatedBet.optionB_bets) / updatedBet.optionB_bets;
+
+                                set(betRef, updatedBet);
+                            });
+                        });
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
