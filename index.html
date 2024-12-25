@@ -353,8 +353,10 @@
 
                                         // Update coefficients
                                         const totalBets = updatedBet.optionA_bets + updatedBet.optionB_bets;
-                                        updatedBet.coefficientA = totalBets / updatedBet.optionA_bets || 1;
-                                        updatedBet.coefficientB = totalBets / updatedBet.optionB_bets || 1;
+
+                                        // Avoid division by zero
+                                        updatedBet.coefficientA = updatedBet.optionA_bets > 0 ? totalBets / updatedBet.optionA_bets : 1;
+                                        updatedBet.coefficientB = updatedBet.optionB_bets > 0 ? totalBets / updatedBet.optionB_bets : 1;
 
                                         // Update bet data and user bet reference
                                         return Promise.all([
