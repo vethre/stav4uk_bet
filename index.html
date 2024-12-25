@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Betting Mini App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            align-items: flex-start;
+        }
+        #app {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="nickname-section" class="text-center">
+            <h2>Welcome to the Betting App!</h2>
+            <p>Please enter your nickname to get started.</p>
+            <input type="text" id="nickname-input" placeholder="Enter your nickname" class="form-control mb-2">
+            <button id="nickname-submit" class="btn btn-primary w-100">Submit</button>
+        </div>
+
+        <div id="betting-section" class="hidden">
+            <h2>Bets</h2>
+            <div id="bets-list">Loading...</div>
+        </div>
+
+        <div id="admin-section" class="hidden">
+            <h3>Admin Panel</h3>
+            <form id="admin-form">
+                <input type="text" id="bet-name" placeholder="Bet Name" class="form-control mb-2">
+                <input type="text" id="option-a" placeholder="Option A Text" class="form-control mb-2">
+                <input type="text" id="option-b" placeholder="Option B Text" class="form-control mb-2">
+                <button type="submit" class="btn btn-success w-100">Create Bet</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCgsq0LoqN-VEGhmKWK_iDQZ0GALlSMXVc",
+            authDomain: "stav4uk-6e77d.firebaseapp.com",
+            databaseURL: "https://stav4uk-6e77d-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "stav4uk-6e77d",
+            storageBucket: "stav4uk-6e77d.firebasestorage.app",
+            messagingSenderId: "431550164866",
+            appId: "1:431550164866:web:2055820a593eaf113e699b"
+        };
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        const user = tg.initDataUnsafe?.user;
+        const userId = user?.id;
+        const adminIds = [700929765];  // Replace with actual admin user IDs
+        const isAdmin = adminIds.includes(userId);
+
+        // DOM Elements
+        const nicknameSection = document.getElementById('nickname-section');
+        const bettingSection = document.getElementById('betting-section');
+        const adminSection = document.getElementById('admin-section');
+        const nicknameInput = document.getElementById('nickname-input');
+        const nicknameSubmit = document.getElementById('nickname-submit');
+        const betsList = document.getElementById('bets-list');
+        const adminForm = document.getElementById('admin-form');
+        const betNameInput = document.getElementById('bet-name');
+        const optionAInput = document.getElementById('option-a');
+        const optionBInput = document.getElementById('option-b');
+
+        // Check if user nickname exists in the database
+        const usersRef = db.ref('users');
+        const userRef = usersRef.child(userId);
+
+        userRef.once('value', snapshot => {
+            const userData = snapshot.val();
+            if (userData && userData.nickname) {
+                // If nickname exists, show betting section
+                nicknameSection.classList.add('hidden');
+                bettingSection.classList.remove('hidden');
+                if (isAdmin) adminSection.classList.remove('hidden');
+                loadBets();
+            } else {
+                // If nickname doesn't exist, ask for it
+                nicknameSection.classList.remove('hidden');
+                bettingSection.classList.add('hidden');
+            }
+        });
+
+        // Save nickname to Firebase
+        nicknameSubmit.addEventListener('click', () => {
+            const nickname = nicknameInput.value.trim();
+            if (nickname) {
+                // Save the nickname in Firebase under the user's ID
+                userRef.set({ nickname })
+                    .then(() => {
+                        nicknameSection.classList.add('hidden');
+                        bettingSection.classList.remove('hidden');
+                        if (isAdmin) adminSection.classList.remove('hidden');
+                        loadBets();  // Load bets after nickname is set
+                    })
+                    .catch((error) => {
+                        alert('Error saving nickname: ' + error.message);
+                    });
+            } else {
+                alert('Please enter a valid nickname');
+            }
+        });
+
+        // Admin - Create a new bet
+        adminForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const betName = betNameInput.value.trim();
+            const optionAText = optionAInput.value.trim();
+            const optionBText = optionBInput.value.trim();
+
+            if (!betName || !optionAText || !optionBText) {
+                alert('Please fill all fields');
+                return;
+            }
+
+            const newBet = {
+                name: betName,
+                optionAText,
+                optionBText,
+                coefficientA: 1.0,
+                coefficientB: 1.0,
+                optionA_bets: 0,
+                optionB_bets: 0
+            };
+
+            // Push new bet to Firebase
+            const betsRef = db.ref('bets');
+            betsRef.push(newBet)
+                .then(() => {
+                    betNameInput.value = '';
+                    optionAInput.value = '';
+                    optionBInput.value = '';
+                    alert('Bet created successfully');
+                })
+                .catch((error) => {
+                    alert('Error creating bet: ' + error.message);
+                });
+        });
+
+        // Function to load bets
+        function loadBets() {
+            const betsRef = db.ref('bets');
+            betsRef.on('value', (snapshot) => {
+                betsList.innerHTML = '';
+                snapshot.forEach((betSnapshot) => {
+                    const bet = betSnapshot.val();
+                    const betId = betSnapshot.key;
+
+                    const betElement = document.createElement('div');
+                    betElement.innerHTML = `
+                        <div class="bet">
+                            <h4>${bet.name}</h4>
+                            <p>Option A: ${bet.optionAText} (Coef: ${bet.coefficientA})</p>
+                            <p>Option B: ${bet.optionBText} (Coef: ${bet.coefficientB})</p>
+                            <button onclick="placeBet('${betId}', 'A')">Bet A</button>
+                            <button onclick="placeBet('${betId}', 'B')">Bet B</button>
+                        </div>
+                    `;
+                    betsList.appendChild(betElement);
+                });
+            });
+        }
+
+        // Place bet function
+        function placeBet(betId, option) {
+            const betRef = db.ref('bets').child(betId);
+            betRef.transaction((bet) => {
+                if (bet) {
+                    const userBetPath = `user_bets/${userId}`;
+                    if (!bet[userBetPath]) {
+                        bet[userBetPath] = option;
+                        if (option === 'A') bet.optionA_bets++;
+                        if (option === 'B') bet.optionB_bets++;
+                        const totalBets = bet.optionA_bets + bet.optionB_bets;
+                        bet.coefficientA = (totalBets / bet.optionA_bets).toFixed(2);
+                        bet.coefficientB = (totalBets / bet.optionB_bets).toFixed(2);
+                    }
+                }
+                return bet;
+            });
+        }
+    </script>
+</body>
+</html>
