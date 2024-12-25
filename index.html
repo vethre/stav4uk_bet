@@ -114,16 +114,16 @@
             nicknameSubmit.addEventListener('click', () => {
                 const nickname = nicknameInput.value.trim();
                 if (nickname) {
-                    // Save the nickname in Firebase under the user's ID
-                    userRef.set({ nickname })
+                    const userRef = ref(db, 'users/' + userId);
+                    set(userRef, { nickname })
                         .then(() => {
+                            console.log('Nickname saved successfully'); // Log success
                             nicknameSection.classList.add('hidden');
                             bettingSection.classList.remove('hidden');
-                            if (isAdmin) adminSection.classList.remove('hidden');
-                            loadBets();  // Load bets after nickname is set
+                            loadBets();
                         })
                         .catch((error) => {
-                            alert('Error saving nickname: ' + error.message);
+                            console.log('Error saving nickname:', error.message); // Log error
                         });
                 } else {
                     alert('Please enter a valid nickname');
