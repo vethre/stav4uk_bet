@@ -55,7 +55,7 @@
 
         <div id="user-info" class="mb-3 text-center">
             <h4 id="nickname-display"></h4>
-            <p id="points-display">Points: 0</p>
+            <p id="points-display">Points: ${points}</p>
         </div>
 
         <div id="admin-tools" class="hidden">
@@ -137,6 +137,7 @@
                         const userData = snapshot.val();
                         document.getElementById('nickname-display').textContent = `Nickname: ${userData.nickname}`;
                         document.getElementById('points-display').textContent = `Points: ${userData.points}`;
+                        updateUserInfo();
                     } else {
                         // Initialize user with default points
                         set(userRef, { nickname: user.first_name, points: 1000 });
