@@ -283,7 +283,7 @@
 
                 window.placeBet = function placeBet(betId, option) {
                     const betRef = ref(db, `bets/${betId}`);
-                    const userBetRef = ref(db, `bets/${betId}/user_bets/${user.id}`);
+                    const userBetRef = ref(db, `bets/${betId}/user_bets/${userId}`);
 
                     get(userBetRef).then((snapshot) => {
                         if (snapshot.exists()) {
