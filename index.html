@@ -94,6 +94,7 @@
             // Check if user nickname exists in the database
             const usersRef = ref(db, 'users');
             const userRef = ref(db, 'users/' + userId);
+            const adminNicknames = ['vethre', 'vether'];
 
             get(userRef).then(snapshot => {
                 const userData = snapshot.val();
@@ -129,6 +130,14 @@
                     alert('Please enter a valid nickname');
                 }
             });
+
+            function checkAdminAccess(nickname) {
+                if (adminNicknames.includes(nickname)) {
+                    adminSection.classList.remove('hidden');
+                } else {
+                    adminSection.classList.add('hidden');
+                }
+            }
 
             // Admin - Create a new bet
             adminForm.addEventListener('submit', (e) => {
@@ -168,46 +177,42 @@
 
             // Function to load bets
             function loadBets() {
-                const betsRef = db.ref('bets');
-                betsRef.on('value', (snapshot) => {
-                    betsList.innerHTML = '';
-                    snapshot.forEach((betSnapshot) => {
-                        const bet = betSnapshot.val();
-                        const betId = betSnapshot.key;
-
-                        const betElement = document.createElement('div');
-                        betElement.innerHTML = `
-                            <div class="bet">
-                                <h4>${bet.name}</h4>
-                                <p>Option A: ${bet.optionAText} (Coef: ${bet.coefficientA})</p>
-                                <p>Option B: ${bet.optionBText} (Coef: ${bet.coefficientB})</p>
-                                <button onclick="placeBet('${betId}', 'A')">Bet A</button>
-                                <button onclick="placeBet('${betId}', 'B')">Bet B</button>
-                            </div>
-                        `;
-                        betsList.appendChild(betElement);
-                    });
+                const betsRef = ref(db, 'bets');
+                get(betsRef).then(snapshot => {
+                    if (snapshot.exists()) {
+                        const bets = snapshot.val();
+                        betsList.innerHTML = '';
+                        Object.keys(bets).forEach(betId => {
+                            const bet = bets[betId];
+                            const betElement = document.createElement('div');
+                            betElement.innerHTML = `
+                                <div class="bet">
+                                    <h4>${bet.name}</h4>
+                                    <p>Option A: ${bet.optionAText} (Coef: ${bet.coefficientA})</p>
+                                    <p>Option B: ${bet.optionBText} (Coef: ${bet.coefficientB})</p>
+                                    <button onclick="placeBet('${betId}', 'A')">Bet A</button>
+                                    <button onclick="placeBet('${betId}', 'B')">Bet B</button>
+                                </div>
+                            `;
+                            betsList.appendChild(betElement);
+                        });
+                    } else {
+                        betsList.innerHTML = 'No bets available';
+                    }
                 });
             }
 
             // Place bet function
-            function placeBet(betId, option) {
-                const betRef = db.ref('bets').child(betId);
-                betRef.transaction((bet) => {
-                    if (bet) {
-                        const userBetPath = `user_bets/${userId}`;
-                        if (!bet[userBetPath]) {
-                            bet[userBetPath] = option;
-                            if (option === 'A') bet.optionA_bets++;
-                            if (option === 'B') bet.optionB_bets++;
-                            const totalBets = bet.optionA_bets + bet.optionB_bets;
-                            bet.coefficientA = (totalBets / bet.optionA_bets).toFixed(2);
-                            bet.coefficientB = (totalBets / bet.optionB_bets).toFixed(2);
-                        }
-                    }
-                    return bet;
+            window.placeBet = function(betId, option) {
+                const betRef = ref(db, 'bets/' + betId);
+                update(betRef, {
+                    [`user_bets/${userId}`]: option
+                }).then(() => {
+                    console.log('Bet placed successfully');
+                }).catch(error => {
+                    console.error('Error placing bet:', error);
                 });
-            }
+            };
         });
     </script>
 </body>
