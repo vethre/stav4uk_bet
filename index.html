@@ -282,6 +282,8 @@
                 };
 
                 window.placeBet = function placeBet(betId, option) {
+                    const userId = user.id;
+
                     const betRef = ref(db, `bets/${betId}`);
                     const userBetRef = ref(db, `bets/${betId}/user_bets/${userId}`);
 
@@ -296,6 +298,8 @@
                                 return;
                             }
 
+                            // Get user's points from the database
+                            const userRef = ref(db, `users/${userId}`);
                             get(userRef).then((userSnapshot) => {
                                 const userData = userSnapshot.val();
                                 if (userData.points < pointsToBet) {
@@ -303,27 +307,46 @@
                                     return;
                                 }
 
-                                set(userBetRef, { option, points: pointsToBet });
-                                set(userRef, { ...userData, points: userData.points - pointsToBet });
+                                // Deduct points and place the bet
+                                set(userRef, { ...userData, points: userData.points - pointsToBet })
+                                    .then(() => {
+                                        console.log('Points deducted successfully.');
+                                        return get(betRef);
+                                    })
+                                    .then((betSnapshot) => {
+                                        const betData = betSnapshot.val();
+                                        const updatedBet = { ...betData };
 
-                                get(betRef).then((betSnapshot) => {
-                                    const betData = betSnapshot.val();
-                                    const updatedBet = { ...betData };
-                                    if (option === 'A') {
-                                        updatedBet.optionA_bets += pointsToBet;
-                                    } else {
-                                        updatedBet.optionB_bets += pointsToBet;
-                                    }
-                                    updatedBet.coefficientA = (updatedBet.optionA_bets + updatedBet.optionB_bets) / updatedBet.optionA_bets;
-                                    updatedBet.coefficientB = (updatedBet.optionA_bets + updatedBet.optionB_bets) / updatedBet.optionB_bets;
+                                        if (option === 'A') {
+                                            updatedBet.optionA_bets += pointsToBet;
+                                        } else if (option === 'B') {
+                                            updatedBet.optionB_bets += pointsToBet;
+                                        } else {
+                                            throw new Error('Invalid bet option.');
+                                        }
 
-                                    set(betRef, updatedBet);
-                                });
+                                        // Update coefficients
+                                        const totalBets = updatedBet.optionA_bets + updatedBet.optionB_bets;
+                                        updatedBet.coefficientA = totalBets / updatedBet.optionA_bets || 1;
+                                        updatedBet.coefficientB = totalBets / updatedBet.optionB_bets || 1;
+
+                                        // Update bet data and user bet reference
+                                        return Promise.all([
+                                            set(betRef, updatedBet),
+                                            set(userBetRef, { option, points: pointsToBet })
+                                        ]);
+                                    })
+                                    .then(() => {
+                                        alert('Bet placed successfully!');
+                                        console.log('Bet updated in the database.');
+                                    })
+                                    .catch((error) => {
+                                        console.error('Error placing bet:', error);
+                                    });
                             });
                         }
                     });
                 };
-
         });
     </script>
 </body>
