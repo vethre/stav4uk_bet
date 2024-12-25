@@ -69,8 +69,8 @@
                 messagingSenderId: "431550164866",
                 appId: "1:431550164866:web:2055820a593eaf113e699b"
             };
-            const app = firebase.initializeApp(firebaseConfig);
-            const db = firebase.database();
+            const app = initializeApp(firebaseConfig);
+            const db = getDatabase(app);
 
             // Telegram WebApp
             const tg = window.Telegram.WebApp;
