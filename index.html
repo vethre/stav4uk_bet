@@ -291,6 +291,13 @@
                         } else {
                             const pointsToBet = parseInt(prompt('Enter the number of points to bet:'), 10);
 
+                            if (userData.points === undefined) {
+                                userData.points = 1000; // Default value if points are not found
+                                set(userRef, userData).then(() => {
+                                    console.log('Points initialized to 1000.');
+                                });
+                            }
+
                             if (!pointsToBet || pointsToBet <= 0) {
                                 alert('Invalid points value.');
                                 return;
