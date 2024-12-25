@@ -102,17 +102,16 @@
             const betNameInput = document.getElementById('bet-name');
             const optionAInput = document.getElementById('option-a');
             const optionBInput = document.getElementById('option-b');
-            document.querySelector('#view-users-btn').addEventListener('click', viewUsers);
-            document.querySelector('#adjust-points-btn').addEventListener('click', () => {
+            const viewAllUsersBtn = document.querySelector('#view-users-btn').addEventListener('click', viewUsers);
+            const adjustPointsBtn = document.querySelector('#adjust-points-btn').addEventListener('click', () => {
                 const userId = prompt('User ID:');
                 const points = parseInt(prompt('Points to add:'), 10);
                 adjustPoints(userId, points);
             });
-            document.querySelector('#delete-bet-btn').addEventListener('click', () => {
+            const deleteBetBtn = document.querySelector('#delete-bet-btn').addEventListener('click', () => {
                 const betId = prompt('Bet ID:');
                 deleteBet(betId);
             });
-
 
             // Check if user nickname exists in the database
             const usersRef = ref(db, 'users');
