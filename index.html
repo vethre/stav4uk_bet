@@ -102,6 +102,17 @@
             const betNameInput = document.getElementById('bet-name');
             const optionAInput = document.getElementById('option-a');
             const optionBInput = document.getElementById('option-b');
+            document.querySelector('#view-users-btn').addEventListener('click', viewUsers);
+            document.querySelector('#adjust-points-btn').addEventListener('click', () => {
+                const userId = prompt('User ID:');
+                const points = parseInt(prompt('Points to add:'), 10);
+                adjustPoints(userId, points);
+            });
+            document.querySelector('#delete-bet-btn').addEventListener('click', () => {
+                const betId = prompt('Bet ID:');
+                deleteBet(betId);
+            });
+
 
             // Check if user nickname exists in the database
             const usersRef = ref(db, 'users');
@@ -251,80 +262,83 @@
                 });
             }
 
-            function adjustPoints(userId, points) {
-                const targetUserRef = ref(db, `users/${userId}`);
-                get(targetUserRef).then((snapshot) => {
-                    if (snapshot.exists()) {
-                        const userData = snapshot.val();
-                        set(targetUserRef, { ...userData, points: userData.points + points });
-                        alert('Points adjusted successfully!');
-                    } else {
-                        alert('User not found.');
-                    }
-                });
-            }
-
-            function viewUsers() {
-                const usersRef = ref(db, 'users');
-                get(usersRef).then((snapshot) => {
-                    if (snapshot.exists()) {
-                        console.log(snapshot.val());
-                        alert('Check console for user data.');
-                    } else {
-                        alert('No users found.');
-                    }
-                });
-            }
-
-
-
-
-            // Place bet function
-            function placeBet(betId, option) {
-                const betRef = ref(db, `bets/${betId}`);
-                const userBetRef = ref(db, `bets/${betId}/user_bets/${user.id}`);
-
-                get(userBetRef).then((snapshot) => {
-                    if (snapshot.exists()) {
-                        alert('You have already placed a bet for this match!');
-                    } else {
-                        const pointsToBet = parseInt(prompt('Enter the number of points to bet:'), 10);
-
-                        if (!pointsToBet || pointsToBet <= 0) {
-                            alert('Invalid points value.');
-                            return;
+                window.viewUsers = function viewUsers() {
+                    const usersRef = ref(db, 'users');
+                    get(usersRef).then((snapshot) => {
+                        if (snapshot.exists()) {
+                            console.log(snapshot.val());
+                            alert('Check console for user data.');
+                        } else {
+                            alert('No users found.');
                         }
+                    });
+                };
 
-                        // Check if the user has enough points
-                        get(userRef).then((userSnapshot) => {
-                            const userData = userSnapshot.val();
-                            if (userData.points < pointsToBet) {
-                                alert('You do not have enough points!');
+                window.adjustPoints = function adjustPoints(userId, points) {
+                    const targetUserRef = ref(db, `users/${userId}`);
+                    get(targetUserRef).then((snapshot) => {
+                        if (snapshot.exists()) {
+                            const userData = snapshot.val();
+                            set(targetUserRef, { ...userData, points: userData.points + points });
+                            alert('Points adjusted successfully!');
+                        } else {
+                            alert('User not found.');
+                        }
+                    });
+                };
+
+                window.deleteBet = function deleteBet(betId) {
+                    const betRef = ref(db, `bets/${betId}`);
+                    set(betRef, null).then(() => {
+                        alert('Bet deleted successfully!');
+                    }).catch((error) => {
+                        alert('Error deleting bet: ' + error.message);
+                    });
+                };
+
+                window.placeBet = function placeBet(betId, option) {
+                    const betRef = ref(db, `bets/${betId}`);
+                    const userBetRef = ref(db, `bets/${betId}/user_bets/${user.id}`);
+
+                    get(userBetRef).then((snapshot) => {
+                        if (snapshot.exists()) {
+                            alert('You have already placed a bet for this match!');
+                        } else {
+                            const pointsToBet = parseInt(prompt('Enter the number of points to bet:'), 10);
+
+                            if (!pointsToBet || pointsToBet <= 0) {
+                                alert('Invalid points value.');
                                 return;
                             }
 
-                            // Place the bet and update points
-                            set(userBetRef, { option, points: pointsToBet });
-                            set(userRef, { ...userData, points: userData.points - pointsToBet });
-
-                            // Update the bet counts and coefficients
-                            get(betRef).then((betSnapshot) => {
-                                const betData = betSnapshot.val();
-                                const updatedBet = { ...betData };
-                                if (option === 'A') {
-                                    updatedBet.optionA_bets += pointsToBet;
-                                } else {
-                                    updatedBet.optionB_bets += pointsToBet;
+                            get(userRef).then((userSnapshot) => {
+                                const userData = userSnapshot.val();
+                                if (userData.points < pointsToBet) {
+                                    alert('You do not have enough points!');
+                                    return;
                                 }
-                                updatedBet.coefficientA = (updatedBet.optionA_bets + updatedBet.optionB_bets) / updatedBet.optionA_bets;
-                                updatedBet.coefficientB = (updatedBet.optionA_bets + updatedBet.optionB_bets) / updatedBet.optionB_bets;
 
-                                set(betRef, updatedBet);
+                                set(userBetRef, { option, points: pointsToBet });
+                                set(userRef, { ...userData, points: userData.points - pointsToBet });
+
+                                get(betRef).then((betSnapshot) => {
+                                    const betData = betSnapshot.val();
+                                    const updatedBet = { ...betData };
+                                    if (option === 'A') {
+                                        updatedBet.optionA_bets += pointsToBet;
+                                    } else {
+                                        updatedBet.optionB_bets += pointsToBet;
+                                    }
+                                    updatedBet.coefficientA = (updatedBet.optionA_bets + updatedBet.optionB_bets) / updatedBet.optionA_bets;
+                                    updatedBet.coefficientB = (updatedBet.optionA_bets + updatedBet.optionB_bets) / updatedBet.optionB_bets;
+
+                                    set(betRef, updatedBet);
+                                });
                             });
-                        });
-                    }
-                });
-            }
+                        }
+                    });
+                };
+
         });
     </script>
 </body>
