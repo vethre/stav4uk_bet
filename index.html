@@ -92,8 +92,8 @@
             const optionBInput = document.getElementById('option-b');
 
             // Check if user nickname exists in the database
-            const usersRef = db.ref('users');
-            const userRef = usersRef.child(userId);
+            const usersRef = ref(db, 'users');
+            const userRef = ref(db, 'users/' + userId);
 
             userRef.once('value', snapshot => {
                 const userData = snapshot.val();
