@@ -60,9 +60,9 @@
 
         <div id="admin-tools" class="hidden">
             <h3>Admin Tools</h3>
-            <button onclick="viewUsers()" class="btn btn-primary mb-2">View All Users</button>
-            <button onclick="adjustPoints(prompt('User ID:'), parseInt(prompt('Points to add:'), 10))" class="btn btn-warning mb-2">Adjust Points</button>
-            <button onclick="deleteBet(prompt('Bet ID:'))" class="btn btn-danger mb-2">Delete Bet</button>
+            <button onclick="viewUsers()" id="view-users-btn" class="btn btn-primary mb-2">View All Users</button>
+            <button id="adjust-points-btn" onclick="adjustPoints(prompt('User ID:'), parseInt(prompt('Points to add:'), 10))" class="btn btn-warning mb-2">Adjust Points</button>
+            <button id="delete-bet-btn" onclick="deleteBet(prompt('Bet ID:'))" class="btn btn-danger mb-2">Delete Bet</button>
         </div>        
         
     </div>
