@@ -86,7 +86,6 @@
             const nicknameInput = document.getElementById('nickname-input');
             const nicknameSubmit = document.getElementById('nickname-submit');
             const betsList = document.getElementById('bets-list');
-            const adminForm = document.getElementById('admin-form');
             const betNameInput = document.getElementById('bet-name');
             const optionAInput = document.getElementById('option-a');
             const optionBInput = document.getElementById('option-b');
@@ -140,37 +139,43 @@
             }
 
             // Admin - Create a new bet
+            const adminForm = document.getElementById('admin-form');
             adminForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const betName = betNameInput.value.trim();
-                const optionAText = optionAInput.value.trim();
-                const optionBText = optionBInput.value.trim();
+                e.preventDefault();  // Prevent form from reloading the page
 
+                const betName = document.getElementById('bet-name').value;
+                const optionAText = document.getElementById('option-a').value;
+                const optionBText = document.getElementById('option-b').value;
+
+                // Validate the inputs
                 if (!betName || !optionAText || !optionBText) {
-                    alert('Please fill all fields');
+                    alert('Please fill in all fields.');
                     return;
                 }
 
+                // Create the bet object
                 const newBet = {
                     name: betName,
                     optionAText,
                     optionBText,
-                    coefficientA: 1.0,
-                    coefficientB: 1.0,
-                    optionA_bets: 0,
-                    optionB_bets: 0
+                    coefficientA: 1.0,  // Default coefficient
+                    coefficientB: 1.0,  // Default coefficient
+                    optionA_bets: 0,    // Initial bet count
+                    optionB_bets: 0     // Initial bet count
                 };
 
-                // Push new bet to Firebase
-                const betsRef = db.ref('bets');
-                betsRef.push(newBet)
+                // Get a reference to the Firebase database for 'bets'
+                const betsRef = ref(db, 'bets');
+                
+                // Push the new bet to Firebase
+                set(push(betsRef), newBet)
                     .then(() => {
-                        betNameInput.value = '';
-                        optionAInput.value = '';
-                        optionBInput.value = '';
-                        alert('Bet created successfully');
+                        console.log('New bet created successfully!');
+                        alert('Bet created!');
+                        adminForm.reset();  // Reset the form after successful submission
                     })
                     .catch((error) => {
+                        console.error('Error creating bet:', error);
                         alert('Error creating bet: ' + error.message);
                     });
             });
