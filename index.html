@@ -195,29 +195,47 @@
                             return;
                         }
 
+                        // Get the current bet data
                         get(betRef).then((betSnapshot) => {
                             const betData = betSnapshot.val();
-                            const updatedBet = { ...betData };
+                            let updatedBet = { ...betData };
 
+                            // Update option A or B based on user's choice
                             if (option === 'A') {
                                 updatedBet.optionA_bets += pointsToBet;
                             } else if (option === 'B') {
                                 updatedBet.optionB_bets += pointsToBet;
                             }
 
-                            const totalBets = updatedBet.optionA_bets + updatedBet.optionB_bets;
-                            updatedBet.coefficientA = totalBets / updatedBet.optionA_bets || 1;
-                            updatedBet.coefficientB = totalBets / updatedBet.optionB_bets || 1;
+                            // Recalculate coefficients based on total bets placed
+                            const totalA = updatedBet.optionA_bets;
+                            const totalB = updatedBet.optionB_bets;
+                            updatedBet.coefficientA = totalA > 0 ? (totalA + totalB) / totalA : 1;
+                            updatedBet.coefficientB = totalB > 0 ? (totalA + totalB) / totalB : 1;
 
                             const updatedUser = { ...userData, points: userData.points - pointsToBet };
 
+                            // Save the updated data in Firebase
                             set(userBetRef, { option, points: pointsToBet }).then(() => {
-                                set(userRef, updatedUser);
-                                set(betRef, updatedBet);
+                                set(userRef, updatedUser);  // Update user points
+                                set(betRef, updatedBet);     // Update bet details with new coefficients
                                 alert('Bet placed successfully!');
                             });
                         });
                     });
+                });
+            }
+
+            // Check if the user is admin
+            function checkAdminStatus() {
+                onValue(adminRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        adminSection.classList.remove('hidden');
+                        document.getElementById('admin-tools').classList.remove('hidden');
+                    } else {
+                        adminSection.classList.add('hidden');
+                        document.getElementById('admin-tools').classList.add('hidden');
+                    }
                 });
             }
 
