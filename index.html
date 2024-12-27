@@ -105,19 +105,6 @@
             const userRef = ref(db, `users/${userId}`);
             const adminRef = ref(db, `admins/${userId}`);
 
-            // Check if the user is admin
-            function checkAdminStatus() {
-                onValue(adminRef, (snapshot) => {
-                    if (snapshot.exists()) {
-                        adminSection.classList.remove('hidden');
-                        document.getElementById('admin-tools').classList.remove('hidden');
-                    } else {
-                        adminSection.classList.add('hidden');
-                        document.getElementById('admin-tools').classList.add('hidden');
-                    }
-                });
-            }
-
             // Check if the nickname exists in Firebase
             function loadUserData() {
                 onValue(userRef, (snapshot) => {
@@ -178,8 +165,8 @@
                     return;
                 }
 
-                get(userRef).then((snapshot) => {
-                    const userData = snapshot.val();
+                get(userRef).then((userSnapshot) => {
+                    const userData = userSnapshot.val();
                     if (userData.points < pointsToBet) {
                         alert('You do not have enough points.');
                         return;
@@ -188,39 +175,40 @@
                     const betRef = ref(db, `bets/${betId}`);
                     const userBetRef = ref(db, `bets/${betId}/user_bets/${userId}`);
 
-                    // Check if the user already placed a bet
-                    get(userBetRef).then((betSnapshot) => {
-                        if (betSnapshot.exists()) {
-                            alert('You have already placed a bet on this option.');
-                            return;
+                    get(betRef).then((betSnapshot) => {
+                        const betData = betSnapshot.val();
+                        const updatedBet = { ...betData };
+
+                        // Update the main bet data: optionA_bets, optionB_bets, and coefficients
+                        if (option === 'A') {
+                            updatedBet.optionA_bets += pointsToBet;
+                        } else if (option === 'B') {
+                            updatedBet.optionB_bets += pointsToBet;
                         }
 
-                        // Get the current bet data
-                        get(betRef).then((betSnapshot) => {
-                            const betData = betSnapshot.val();
-                            let updatedBet = { ...betData };
+                        // Update the coefficients based on the new total bets
+                        const totalBets = updatedBet.optionA_bets + updatedBet.optionB_bets;
+                        updatedBet.coefficientA = totalBets / updatedBet.optionA_bets || 1;
+                        updatedBet.coefficientB = totalBets / updatedBet.optionB_bets || 1;
 
-                            // Update option A or B based on user's choice
-                            if (option === 'A') {
-                                updatedBet.optionA_bets += pointsToBet;
-                            } else if (option === 'B') {
-                                updatedBet.optionB_bets += pointsToBet;
-                            }
+                        // Save the updated bet data (option bets and coefficients)
+                        const updatedUser = { ...userData, points: userData.points - pointsToBet };
 
-                            // Recalculate coefficients based on total bets placed
-                            const totalA = updatedBet.optionA_bets;
-                            const totalB = updatedBet.optionB_bets;
-                            updatedBet.coefficientA = totalA > 0 ? (totalA + totalB) / totalA : 1;
-                            updatedBet.coefficientB = totalB > 0 ? (totalA + totalB) / totalB : 1;
+                        // Save user choice in the user_bets subnode
+                        const userBetData = {
+                            option,      // User's selected option (A or B)
+                            points: pointsToBet
+                        };
 
-                            const updatedUser = { ...userData, points: userData.points - pointsToBet };
-
-                            // Save the updated data in Firebase
-                            set(userBetRef, { option, points: pointsToBet }).then(() => {
-                                set(userRef, updatedUser);  // Update user points
-                                set(betRef, updatedBet);     // Update bet details with new coefficients
-                                alert('Bet placed successfully!');
-                            });
+                        // Save changes to the database
+                        return Promise.all([
+                            set(userRef, updatedUser),                    // Update the user's points
+                            set(betRef, updatedBet),                       // Update the bet data
+                            set(userBetRef, userBetData)                  // Save the user's bet in user_bets
+                        ]).then(() => {
+                            alert('Bet placed successfully!');
+                        }).catch(error => {
+                            alert('Error placing bet: ' + error.message);
                         });
                     });
                 });
