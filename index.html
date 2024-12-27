@@ -27,6 +27,15 @@
         .hidden {
             display: none;
         }
+        .bet-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .bet-option button {
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
@@ -55,329 +64,168 @@
 
         <div id="user-info" class="mb-3 text-center">
             <h4 id="nickname-display"></h4>
-            <p id="points-display">Points: ${points}</p>
+            <p id="points-display">Points: 0</p>
         </div>
 
         <div id="admin-tools" class="hidden">
             <h3>Admin Tools</h3>
-            <button id="adjust-points-btn" onclick="adjustPoints(prompt('User ID:'), parseInt(prompt('Points to add:'), 10))" class="btn btn-warning mb-2">Adjust Points</button>
-            <button id="delete-bet-btn" onclick="deleteBet(prompt('Bet ID:'))" class="btn btn-danger mb-2">Delete Bet</button>
-        </div>        
-        
+            <button id="adjust-points-btn" class="btn btn-warning mb-2">Adjust Points</button>
+            <button id="delete-bet-btn" class="btn btn-danger mb-2">Delete Bet</button>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
-        import { getDatabase, ref, push, set, get, child } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
-        // Wait until the DOM is fully loaded
-        window.addEventListener('DOMContentLoaded', (event) => {
-            // Initialize Firebase
+        import { getDatabase, ref, set, push, get, child, onValue } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+
+        window.addEventListener('DOMContentLoaded', () => {
             const firebaseConfig = {
                 apiKey: "AIzaSyCgsq0LoqN-VEGhmKWK_iDQZ0GALlSMXVc",
                 authDomain: "stav4uk-6e77d.firebaseapp.com",
                 databaseURL: "https://stav4uk-6e77d-default-rtdb.europe-west1.firebasedatabase.app",
                 projectId: "stav4uk-6e77d",
-                storageBucket: "stav4uk-6e77d.firebasestorage.app",
+                storageBucket: "stav4uk-6e77d.firebaseapp.com",
                 messagingSenderId: "431550164866",
                 appId: "1:431550164866:web:2055820a593eaf113e699b"
             };
+
             const app = initializeApp(firebaseConfig);
             const db = getDatabase(app);
 
-            // Telegram WebApp
             const tg = window.Telegram.WebApp;
             const user = tg.initDataUnsafe?.user;
             const userId = user?.id;
-            const adminIds = [700929765];  // Replace with actual admin user IDs
-            const isAdmin = adminIds.includes(userId);
 
-            // DOM Elements
             const nicknameSection = document.getElementById('nickname-section');
             const bettingSection = document.getElementById('betting-section');
             const adminSection = document.getElementById('admin-section');
-            const nicknameInput = document.getElementById('nickname-input');
-            const nicknameSubmit = document.getElementById('nickname-submit');
             const betsList = document.getElementById('bets-list');
-            const betNameInput = document.getElementById('bet-name');
-            const optionAInput = document.getElementById('option-a');
-            const optionBInput = document.getElementById('option-b');
-            const adjustPointsBtn = document.querySelector('#adjust-points-btn').addEventListener('click', () => {
-                const userId = prompt('User ID:');
-                const points = parseInt(prompt('Points to add:'), 10);
-                adjustPoints(userId, points);
-            });
-            const deleteBetBtn = document.querySelector('#delete-bet-btn').addEventListener('click', () => {
-                const betId = prompt('Bet ID:');
-                deleteBet(betId);
-            });
 
-            // Check if user nickname exists in the database
-            const usersRef = ref(db, 'users');
-            const userRef = ref(db, 'users/' + userId);
-            const adminNicknames = ['vethre', 'vether'];
-
-            get(userRef).then(snapshot => {
-                const userData = snapshot.val();
-                if (userData && userData.nickname) {
-                    // If nickname exists, show betting section
-                    nicknameSection.classList.add('hidden');
-                    bettingSection.classList.remove('hidden');
-                    if (isAdmin) adminSection.classList.remove('hidden');
-                    loadBets();
-                } else {
-                    // If nickname doesn't exist, ask for it
-                    nicknameSection.classList.remove('hidden');
-                    bettingSection.classList.add('hidden');
-                }
-            });
+            const userRef = ref(db, `users/${userId}`);
 
             function updateUserInfo() {
-                get(userRef).then((snapshot) => {
+                onValue(userRef, (snapshot) => {
                     if (snapshot.exists()) {
                         const userData = snapshot.val();
                         document.getElementById('nickname-display').textContent = `Nickname: ${userData.nickname}`;
                         document.getElementById('points-display').textContent = `Points: ${userData.points}`;
-                        updateUserInfo();
-                    } else {
-                        // Initialize user with default points
-                        set(userRef, { nickname: user.first_name, points: 1000 });
-                        updateUserInfo(); // Call again to display the new data
                     }
                 });
             }
 
-            updateUserInfo();
-
-            if (isAdmin) {
-                document.getElementById('admin-tools').classList.remove('hidden');
-            }
-
-            // Save nickname to Firebase
-            nicknameSubmit.addEventListener('click', () => {
-                const nickname = nicknameInput.value.trim();
-                if (nickname) {
-                    const userRef = ref(db, 'users/' + userId);
-                    set(userRef, { nickname })
-                        .then(() => {
-                            console.log('Nickname saved successfully'); // Log success
-                            nicknameSection.classList.add('hidden');
-                            bettingSection.classList.remove('hidden');
-                            loadBets();
-                        })
-                        .catch((error) => {
-                            console.log('Error saving nickname:', error.message); // Log error
-                        });
-                } else {
-                    alert('Please enter a valid nickname');
-                }
-            });
-
-            function checkAdminAccess(nickname) {
-                if (adminNicknames.includes(nickname)) {
-                    adminSection.classList.remove('hidden');
-                } else {
-                    adminSection.classList.add('hidden');
-                }
-            }
-
-            // Admin - Create a new bet
-            const adminForm = document.getElementById('admin-form');
-            if (adminForm) {
-            adminForm.addEventListener('submit', (e) => {
-                e.preventDefault();  // Prevent page reload
-
-                // Log that the event was triggered
-                console.log("Create Bet Form Submitted");
-
-                const betName = document.getElementById('bet-name').value;
-                const optionAText = document.getElementById('option-a').value;
-                const optionBText = document.getElementById('option-b').value;
-
-                // Log the input values
-                console.log("Bet Name:", betName);
-                console.log("Option A Text:", optionAText);
-                console.log("Option B Text:", optionBText);
-
-                // Validate inputs
-                if (!betName || !optionAText || !optionBText) {
-                    alert('Please fill in all fields.');
-                    return;
-                }
-
-                const newBet = {
-                    name: betName,
-                    optionAText,
-                    optionBText,
-                    coefficientA: 1.0,  // Default coefficient
-                    coefficientB: 1.0,
-                    optionA_bets: 0,
-                    optionB_bets: 0
-                };
-
-                // Create a reference to the 'bets' node in Firebase
-                const betsRef = ref(db, 'bets');
-
-                // Push the new bet to Firebase
-                push(betsRef, newBet)
-                    .then(() => {
-                        console.log('New bet created successfully!');
-                        alert('Bet created!');
-                        adminForm.reset();  // Reset form on success
-                    })
-                    .catch((error) => {
-                        console.error('Error creating bet:', error);
-                        alert('Error creating bet: ' + error.message);
-                    });
-            });
-        } else {
-            console.log("Admin form element not found.");
-        }
-
-            // Function to load bets
             function loadBets() {
                 const betsRef = ref(db, 'bets');
-                get(betsRef).then(snapshot => {
+                onValue(betsRef, (snapshot) => {
                     if (snapshot.exists()) {
                         const bets = snapshot.val();
                         betsList.innerHTML = '';
                         Object.keys(bets).forEach(betId => {
                             const bet = bets[betId];
                             const betElement = document.createElement('div');
+                            betElement.classList.add('bet-option');
                             betElement.innerHTML = `
-                                <div class="bet">
-                                    <h4>${bet.name}</h4>
-                                    <p>Option A: ${bet.optionAText} (Coef: ${bet.coefficientA})</p>
-                                    <p>Option B: ${bet.optionBText} (Coef: ${bet.coefficientB})</p>
-                                    <button onclick="placeBet('${betId}', 'A')">Bet A</button>
-                                    <button onclick="placeBet('${betId}', 'B')">Bet B</button>
+                                <div>
+                                    <h5>${bet.name}</h5>
+                                    <p>Option A: ${bet.optionAText} (Coef: ${bet.coefficientA.toFixed(2)})</p>
+                                    <p>Option B: ${bet.optionBText} (Coef: ${bet.coefficientB.toFixed(2)})</p>
+                                </div>
+                                <div>
+                                    <button id="bet-a-${betId}" class="btn btn-primary btn-sm">Bet A</button>
+                                    <button id="bet-b-${betId}" class="btn btn-secondary btn-sm">Bet B</button>
                                 </div>
                             `;
+
                             betsList.appendChild(betElement);
+
+                            const betAButton = document.getElementById(`bet-a-${betId}`);
+                            const betBButton = document.getElementById(`bet-b-${betId}`);
+
+                            // Disable buttons based on user bets
+                            onValue(ref(db, `bets/${betId}/user_bets/${userId}`), (betSnapshot) => {
+                                if (betSnapshot.exists()) {
+                                    const userBet = betSnapshot.val();
+                                    if (userBet.option === 'A') {
+                                        betBButton.disabled = true;
+                                        betAButton.textContent = `Add to Bet A (${userBet.points})`;
+                                    } else if (userBet.option === 'B') {
+                                        betAButton.disabled = true;
+                                        betBButton.textContent = `Add to Bet B (${userBet.points})`;
+                                    }
+                                }
+                            });
+
+                            // Place bet handlers
+                            betAButton.addEventListener('click', () => placeBet(betId, 'A'));
+                            betBButton.addEventListener('click', () => placeBet(betId, 'B'));
                         });
                     } else {
-                        betsList.innerHTML = 'No bets available';
+                        betsList.innerHTML = '<p>No bets available</p>';
                     }
                 });
             }
 
-                window.adjustPoints = function adjustPoints(userId, points) {
-                    const targetUserRef = ref(db, `users/${userId}`);
-                    get(targetUserRef).then((snapshot) => {
-                        if (snapshot.exists()) {
-                            const userData = snapshot.val();
-                            set(targetUserRef, { ...userData, points: userData.points + points });
-                            alert('Points adjusted successfully!');
-                        } else {
-                            alert('User not found.');
-                        }
-                    });
-                };
+            function placeBet(betId, option) {
+                const pointsToBet = parseInt(prompt('Enter the number of points to bet:'), 10);
+                if (!pointsToBet || pointsToBet <= 0) {
+                    alert('Invalid points value.');
+                    return;
+                }
 
-                window.deleteBet = function deleteBet(betId) {
-                    const betRef = ref(db, `bets/${betId}`);
-                    set(betRef, null).then(() => {
-                        alert('Bet deleted successfully!');
-                    }).catch((error) => {
-                        alert('Error deleting bet: ' + error.message);
-                    });
-                };
+                get(userRef).then((userSnapshot) => {
+                    const userData = userSnapshot.val();
+                    if (userData.points < pointsToBet) {
+                        alert('You do not have enough points.');
+                        return;
+                    }
 
-                window.placeBet = function placeBet(betId, option) {
                     const betRef = ref(db, `bets/${betId}`);
                     const userBetRef = ref(db, `bets/${betId}/user_bets/${userId}`);
 
-                    get(userBetRef).then((snapshot) => {
-                        if (snapshot.exists()) {
-                            alert('You have already placed a bet for this match!');
-                        } else {
-                            // Get user's points from the database
-                            const userRef = ref(db, `users/${userId}`);
-                            get(userRef).then((userSnapshot) => {
-                                const userData = userSnapshot.val();  // Retrieve user data here
+                    get(betRef).then((betSnapshot) => {
+                        const betData = betSnapshot.val();
+                        const updatedBet = { ...betData };
 
-                                if (!userData) {
-                                    alert('User data not found.');
-                                    return;
-                                }
-
-                                // Log user data and points for debugging
-                                console.log('User data:', userData);
-                                console.log('User points:', userData.points);
-
-                                if (userData.points === undefined) {
-                                    userData.points = 1000;  // Default value if points are not found
-                                    set(userRef, userData).then(() => {
-                                        console.log('Points initialized to 1000.');
-                                    });
-                                }
-
-                                // Prompt for points to bet
-                                const pointsToBet = parseInt(prompt('Enter the number of points to bet:'), 10);
-
-                                if (!pointsToBet || pointsToBet <= 0) {
-                                    alert('Invalid points value.');
-                                    return;
-                                }
-
-                                // Check if the user has enough points
-                                if (isNaN(userData.points) || userData.points < pointsToBet) {
-                                    alert('You do not have enough points or points value is invalid.');
-                                    return;
-                                }
-
-                                // Deduct points and place the bet
-                                const updatedUserData = { ...userData, points: userData.points - pointsToBet };
-
-                                // Ensure points are valid before updating
-                                if (isNaN(updatedUserData.points) || updatedUserData.points < 0) {
-                                    alert('Invalid points value after deduction.');
-                                    return;
-                                }
-
-                                // Update user points in Firebase
-                                set(userRef, updatedUserData)
-                                    .then(() => {
-                                        console.log('Points deducted successfully.');
-                                        return get(betRef);
-                                    })
-                                    .then((betSnapshot) => {
-                                        const betData = betSnapshot.val();
-                                        const updatedBet = { ...betData };
-
-                                        if (option === 'A') {
-                                            updatedBet.optionA_bets += pointsToBet;
-                                        } else if (option === 'B') {
-                                            updatedBet.optionB_bets += pointsToBet;
-                                        } else {
-                                            throw new Error('Invalid bet option.');
-                                        }
-
-                                        // Update coefficients
-                                        const totalBets = updatedBet.optionA_bets + updatedBet.optionB_bets;
-
-                                        // Avoid division by zero
-                                        updatedBet.coefficientA = updatedBet.optionA_bets > 0 ? totalBets / updatedBet.optionA_bets : 1;
-                                        updatedBet.coefficientB = updatedBet.optionB_bets > 0 ? totalBets / updatedBet.optionB_bets : 1;
-
-                                        // Update bet data and user bet reference
-                                        return Promise.all([
-                                            set(betRef, updatedBet),
-                                            set(userBetRef, { option, points: pointsToBet })
-                                        ]);
-                                    })
-                                    .then(() => {
-                                        alert('Bet placed successfully!');
-                                        console.log('Bet updated in the database.');
-                                    })
-                                    .catch((error) => {
-                                        console.error('Error placing bet:', error);
-                                    });
-                            }).catch(error => {
-                                console.error('Error getting user data:', error.message);
-                            });
+                        if (option === 'A') {
+                            updatedBet.optionA_bets += pointsToBet;
+                        } else if (option === 'B') {
+                            updatedBet.optionB_bets += pointsToBet;
                         }
+
+                        const totalBets = updatedBet.optionA_bets + updatedBet.optionB_bets;
+                        updatedBet.coefficientA = totalBets / updatedBet.optionA_bets || 1;
+                        updatedBet.coefficientB = totalBets / updatedBet.optionB_bets || 1;
+
+                        const updatedUserData = { ...userData, points: userData.points - pointsToBet };
+
+                        set(userRef, updatedUserData);
+                        set(betRef, updatedBet);
+                        set(userBetRef, { option, points: pointsToBet });
                     });
-                };
+                });
+            }
+
+            // Initialize UI
+            get(userRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    nicknameSection.classList.add('hidden');
+                    bettingSection.classList.remove('hidden');
+                    updateUserInfo();
+                    loadBets();
+                } else {
+                    nicknameSection.classList.remove('hidden');
+                }
+            });
+
+            document.getElementById('nickname-submit').addEventListener('click', () => {
+                const nickname = document.getElementById('nickname-input').value.trim();
+                if (nickname) {
+                    set(userRef, { nickname, points: 1000 });
+                    nicknameSection.classList.add('hidden');
+                    bettingSection.classList.remove('hidden');
+                    updateUserInfo();
+                    loadBets();
+                }
+            });
         });
     </script>
 </body>
