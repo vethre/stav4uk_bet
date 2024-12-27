@@ -228,11 +228,14 @@
 
             // Check if the user is admin
             function checkAdminStatus() {
+                const adminRef = ref(db, `admins/${userId}`);  // Check if userId exists in the 'admins' node
                 onValue(adminRef, (snapshot) => {
                     if (snapshot.exists()) {
+                        // User is an admin
                         adminSection.classList.remove('hidden');
                         document.getElementById('admin-tools').classList.remove('hidden');
                     } else {
+                        // User is not an admin
                         adminSection.classList.add('hidden');
                         document.getElementById('admin-tools').classList.add('hidden');
                     }
@@ -283,7 +286,15 @@
 
             // Initialize the app
             if (userId) {
-                loadUserData();
+                get(userRef).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        nicknameSection.classList.add('hidden');
+                        bettingSection.classList.remove('hidden');
+                        updateUserInfo();
+                        loadBets();
+                        checkAdminStatus();  // Check if the user is an admin
+                    }
+                });
             }
         });
     </script>
