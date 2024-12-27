@@ -8,7 +8,8 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
-            background-color: #f8f9fa;
+            background: rgb(238,174,202);
+            background: radial-gradient(circle, rgba(238,174,202,1) 0%, rgba(148,187,233,1) 100%);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -76,7 +77,7 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
-        import { getDatabase, ref, set, push, get, child, onValue } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+        import { getDatabase, ref, set, push, get, child, onValue, update } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 
         window.addEventListener('DOMContentLoaded', () => {
             const firebaseConfig = {
@@ -195,37 +196,106 @@
                         updatedBet.coefficientA = totalBets / updatedBet.optionA_bets || 1;
                         updatedBet.coefficientB = totalBets / updatedBet.optionB_bets || 1;
 
-                        const updatedUserData = { ...userData, points: userData.points - pointsToBet };
+                        const updatedUser = { ...userData, points: userData.points - pointsToBet };
 
-                        set(userRef, updatedUserData);
-                        set(betRef, updatedBet);
-                        set(userBetRef, { option, points: pointsToBet });
+                        return Promise.all([
+                            set(userRef, updatedUser),
+                            set(betRef, updatedBet),
+                            set(userBetRef, { option, points: pointsToBet })
+                        ]).then(() => {
+                            alert('Bet placed successfully!');
+                        });
                     });
                 });
             }
 
-            // Initialize UI
-            get(userRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    nicknameSection.classList.add('hidden');
-                    bettingSection.classList.remove('hidden');
-                    updateUserInfo();
-                    loadBets();
+            document.getElementById('nickname-submit').addEventListener('click', () => {
+                const nicknameInput = document.getElementById('nickname-input');
+                const nickname = nicknameInput.value.trim();
+
+                if (nickname) {
+                    set(userRef, { nickname, points: 1000 }).then(() => {
+                        nicknameSection.classList.add('hidden');
+                        bettingSection.classList.remove('hidden');
+                        adminSection.classList.remove('hidden');
+                        updateUserInfo();
+                        loadBets();
+                    });
                 } else {
-                    nicknameSection.classList.remove('hidden');
+                    alert('Please enter a valid nickname.');
                 }
             });
 
-            document.getElementById('nickname-submit').addEventListener('click', () => {
-                const nickname = document.getElementById('nickname-input').value.trim();
-                if (nickname) {
-                    set(userRef, { nickname, points: 1000 });
-                    nicknameSection.classList.add('hidden');
-                    bettingSection.classList.remove('hidden');
-                    updateUserInfo();
-                    loadBets();
+            // Admin Panel Logic
+            document.getElementById('admin-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const betName = document.getElementById('bet-name').value.trim();
+                const optionAText = document.getElementById('option-a').value.trim();
+                const optionBText = document.getElementById('option-b').value.trim();
+
+                if (betName && optionAText && optionBText) {
+                    const betsRef = ref(db, 'bets');
+                    const newBetRef = push(betsRef);
+
+                    set(newBetRef, {
+                        name: betName,
+                        optionAText,
+                        optionBText,
+                        optionA_bets: 0,
+                        optionB_bets: 0,
+                        coefficientA: 1,
+                        coefficientB: 1
+                    }).then(() => {
+                        alert('Bet created successfully!');
+                        document.getElementById('admin-form').reset();
+                    });
+                } else {
+                    alert('All fields are required!');
                 }
             });
+
+            // Admin Tools Logic
+            document.getElementById('adjust-points-btn').addEventListener('click', () => {
+                const points = parseInt(prompt('Enter new points for the user:'), 10);
+
+                if (!isNaN(points) && points >= 0) {
+                    get(userRef).then((snapshot) => {
+                        if (snapshot.exists()) {
+                            const userData = snapshot.val();
+                            userData.points = points;
+                            set(userRef, userData).then(() => {
+                                alert('Points updated successfully!');
+                            });
+                        }
+                    });
+                } else {
+                    alert('Invalid points value.');
+                }
+            });
+
+            document.getElementById('delete-bet-btn').addEventListener('click', () => {
+                const betId = prompt('Enter the Bet ID to delete:');
+                if (betId) {
+                    const betRef = ref(db, `bets/${betId}`);
+                    set(betRef, null).then(() => {
+                        alert('Bet deleted successfully!');
+                    });
+                }
+            });
+
+            // Initialize the app
+            if (userId) {
+                get(userRef).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        nicknameSection.classList.add('hidden');
+                        bettingSection.classList.remove('hidden');
+                        adminSection.classList.remove('hidden');
+                        updateUserInfo();
+                        loadBets();
+                    }
+                });
+            }
         });
     </script>
 </body>
