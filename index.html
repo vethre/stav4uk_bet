@@ -96,16 +96,13 @@
             const tg = window.Telegram.WebApp;
             const user = tg.initDataUnsafe?.user;
             const userId = user?.id;
-
-            // List of Admin user IDs
-            const adminIds = [700929765];  // Replace with actual admin IDs
+            const adminId = "700929765";  // Replace with your actual admin ID
 
             const nicknameSection = document.getElementById('nickname-section');
             const bettingSection = document.getElementById('betting-section');
             const adminSection = document.getElementById('admin-section');
-            const betsList = document.getElementById('bets-list');
             const adminTools = document.getElementById('admin-tools');
-
+            const betsList = document.getElementById('bets-list');
             const userRef = ref(db, `users/${userId}`);
 
             function updateUserInfo() {
@@ -140,10 +137,75 @@
                                 </div>
                             `;
                             betsList.appendChild(betElement);
+
+                            const betAButton = document.getElementById(`bet-a-${betId}`);
+                            const betBButton = document.getElementById(`bet-b-${betId}`);
+
+                            // Disable buttons based on user bets
+                            onValue(ref(db, `bets/${betId}/user_bets/${userId}`), (betSnapshot) => {
+                                if (betSnapshot.exists()) {
+                                    const userBet = betSnapshot.val();
+                                    if (userBet.option === 'A') {
+                                        betBButton.disabled = true;
+                                        betAButton.textContent = `Add to Bet A (${userBet.points})`;
+                                    } else if (userBet.option === 'B') {
+                                        betAButton.disabled = true;
+                                        betBButton.textContent = `Add to Bet B (${userBet.points})`;
+                                    }
+                                }
+                            });
+
+                            // Place bet handlers
+                            betAButton.addEventListener('click', () => placeBet(betId, 'A'));
+                            betBButton.addEventListener('click', () => placeBet(betId, 'B'));
                         });
                     } else {
                         betsList.innerHTML = '<p>No bets available</p>';
                     }
+                });
+            }
+
+            function placeBet(betId, option) {
+                const pointsToBet = parseInt(prompt('Enter the number of points to bet:'), 10);
+                if (!pointsToBet || pointsToBet <= 0) {
+                    alert('Invalid points value.');
+                    return;
+                }
+
+                get(userRef).then((userSnapshot) => {
+                    const userData = userSnapshot.val();
+                    if (userData.points < pointsToBet) {
+                        alert('You do not have enough points.');
+                        return;
+                    }
+
+                    const betRef = ref(db, `bets/${betId}`);
+                    const userBetRef = ref(db, `bets/${betId}/user_bets/${userId}`);
+
+                    get(betRef).then((betSnapshot) => {
+                        const betData = betSnapshot.val();
+                        const updatedBet = { ...betData };
+
+                        if (option === 'A') {
+                            updatedBet.optionA_bets += pointsToBet;
+                        } else if (option === 'B') {
+                            updatedBet.optionB_bets += pointsToBet;
+                        }
+
+                        const totalBets = updatedBet.optionA_bets + updatedBet.optionB_bets;
+                        updatedBet.coefficientA = totalBets / updatedBet.optionA_bets || 1;
+                        updatedBet.coefficientB = totalBets / updatedBet.optionB_bets || 1;
+
+                        const updatedUser = { ...userData, points: userData.points - pointsToBet };
+
+                        return Promise.all([
+                            set(userRef, updatedUser),
+                            set(betRef, updatedBet),
+                            set(userBetRef, { option, points: pointsToBet })
+                        ]).then(() => {
+                            alert('Bet placed successfully!');
+                        });
+                    });
                 });
             }
 
@@ -158,8 +220,8 @@
                         updateUserInfo();
                         loadBets();
 
-                        // Show admin section and tools only if the user is an admin
-                        if (adminIds.includes(userId)) {
+                        // Check if the user is an admin
+                        if (userId === adminId) {
                             adminSection.classList.remove('hidden');
                             adminTools.classList.remove('hidden');
                         }
@@ -172,6 +234,7 @@
             // Admin Panel Logic
             document.getElementById('admin-form').addEventListener('submit', (e) => {
                 e.preventDefault();
+
                 const betName = document.getElementById('bet-name').value.trim();
                 const optionAText = document.getElementById('option-a').value.trim();
                 const optionBText = document.getElementById('option-b').value.trim();
@@ -179,6 +242,7 @@
                 if (betName && optionAText && optionBText) {
                     const betsRef = ref(db, 'bets');
                     const newBetRef = push(betsRef);
+
                     set(newBetRef, {
                         name: betName,
                         optionAText,
@@ -224,18 +288,6 @@
                     });
                 }
             });
-
-            // Initialize the app
-            if (userId) {
-                get(userRef).then((snapshot) => {
-                    if (snapshot.exists()) {
-                        nicknameSection.classList.add('hidden');
-                        bettingSection.classList.remove('hidden');
-                        updateUserInfo();
-                        loadBets();
-                    }
-                });
-            }
         });
     </script>
 </body>
