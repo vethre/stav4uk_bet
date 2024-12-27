@@ -96,26 +96,45 @@
             const tg = window.Telegram.WebApp;
             const user = tg.initDataUnsafe?.user;
             const userId = user?.id;
-            const adminId = "700929765";  // Replace with your actual admin ID
 
             const nicknameSection = document.getElementById('nickname-section');
             const bettingSection = document.getElementById('betting-section');
             const adminSection = document.getElementById('admin-section');
-            const adminTools = document.getElementById('admin-tools');
             const betsList = document.getElementById('bets-list');
-            const userRef = ref(db, `users/${userId}`);
 
-            function updateUserInfo() {
-                onValue(userRef, (snapshot) => {
+            const userRef = ref(db, `users/${userId}`);
+            const adminRef = ref(db, `admins/${userId}`);
+
+            // Check if the user is admin
+            function checkAdminStatus() {
+                onValue(adminRef, (snapshot) => {
                     if (snapshot.exists()) {
-                        const userData = snapshot.val();
-                        document.getElementById('nickname-display').textContent = `Nickname: ${userData.nickname}`;
-                        document.getElementById('points-display').textContent = `Points: ${userData.points}`;
+                        adminSection.classList.remove('hidden');
+                        document.getElementById('admin-tools').classList.remove('hidden');
+                    } else {
+                        adminSection.classList.add('hidden');
+                        document.getElementById('admin-tools').classList.add('hidden');
                     }
                 });
             }
 
-            function loadBets() {
+            // Check if the nickname exists in Firebase
+            function loadUserData() {
+                get(userRef).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const userData = snapshot.val();
+                        document.getElementById('nickname-display').textContent = `Nickname: ${userData.nickname}`;
+                        document.getElementById('points-display').textContent = `Points: ${userData.points}`;
+                        nicknameSection.classList.add('hidden');
+                        bettingSection.classList.remove('hidden');
+                        updateBets();
+                        checkAdminStatus();
+                    }
+                });
+            }
+
+            // Load bets from Firebase
+            function updateBets() {
                 const betsRef = ref(db, 'bets');
                 onValue(betsRef, (snapshot) => {
                     if (snapshot.exists()) {
@@ -138,24 +157,10 @@
                             `;
                             betsList.appendChild(betElement);
 
+                            // Bet placement logic for users
                             const betAButton = document.getElementById(`bet-a-${betId}`);
                             const betBButton = document.getElementById(`bet-b-${betId}`);
 
-                            // Disable buttons based on user bets
-                            onValue(ref(db, `bets/${betId}/user_bets/${userId}`), (betSnapshot) => {
-                                if (betSnapshot.exists()) {
-                                    const userBet = betSnapshot.val();
-                                    if (userBet.option === 'A') {
-                                        betBButton.disabled = true;
-                                        betAButton.textContent = `Add to Bet A (${userBet.points})`;
-                                    } else if (userBet.option === 'B') {
-                                        betAButton.disabled = true;
-                                        betBButton.textContent = `Add to Bet B (${userBet.points})`;
-                                    }
-                                }
-                            });
-
-                            // Place bet handlers
                             betAButton.addEventListener('click', () => placeBet(betId, 'A'));
                             betBButton.addEventListener('click', () => placeBet(betId, 'B'));
                         });
@@ -165,6 +170,7 @@
                 });
             }
 
+            // Place a bet
             function placeBet(betId, option) {
                 const pointsToBet = parseInt(prompt('Enter the number of points to bet:'), 10);
                 if (!pointsToBet || pointsToBet <= 0) {
@@ -172,8 +178,8 @@
                     return;
                 }
 
-                get(userRef).then((userSnapshot) => {
-                    const userData = userSnapshot.val();
+                get(userRef).then((snapshot) => {
+                    const userData = snapshot.val();
                     if (userData.points < pointsToBet) {
                         alert('You do not have enough points.');
                         return;
@@ -198,40 +204,29 @@
 
                         const updatedUser = { ...userData, points: userData.points - pointsToBet };
 
-                        return Promise.all([
-                            set(userRef, updatedUser),
-                            set(betRef, updatedBet),
-                            set(userBetRef, { option, points: pointsToBet })
-                        ]).then(() => {
+                        set(userBetRef, { option, points: pointsToBet }).then(() => {
+                            set(userRef, updatedUser);
+                            set(betRef, updatedBet);
                             alert('Bet placed successfully!');
                         });
                     });
                 });
             }
 
+            // Handle nickname submission
             document.getElementById('nickname-submit').addEventListener('click', () => {
                 const nicknameInput = document.getElementById('nickname-input');
                 const nickname = nicknameInput.value.trim();
-
                 if (nickname) {
                     set(userRef, { nickname, points: 1000 }).then(() => {
-                        nicknameSection.classList.add('hidden');
-                        bettingSection.classList.remove('hidden');
-                        updateUserInfo();
-                        loadBets();
-
-                        // Check if the user is an admin
-                        if (userId === adminId) {
-                            adminSection.classList.remove('hidden');
-                            adminTools.classList.remove('hidden');
-                        }
+                        loadUserData();
                     });
                 } else {
                     alert('Please enter a valid nickname.');
                 }
             });
 
-            // Admin Panel Logic
+            // Admin bet creation form
             document.getElementById('admin-form').addEventListener('submit', (e) => {
                 e.preventDefault();
 
@@ -260,34 +255,10 @@
                 }
             });
 
-            // Admin Tools Logic
-            document.getElementById('adjust-points-btn').addEventListener('click', () => {
-                const points = parseInt(prompt('Enter new points for the user:'), 10);
-
-                if (!isNaN(points) && points >= 0) {
-                    get(userRef).then((snapshot) => {
-                        if (snapshot.exists()) {
-                            const userData = snapshot.val();
-                            userData.points = points;
-                            set(userRef, userData).then(() => {
-                                alert('Points updated successfully!');
-                            });
-                        }
-                    });
-                } else {
-                    alert('Invalid points value.');
-                }
-            });
-
-            document.getElementById('delete-bet-btn').addEventListener('click', () => {
-                const betId = prompt('Enter the Bet ID to delete:');
-                if (betId) {
-                    const betRef = ref(db, `bets/${betId}`);
-                    set(betRef, null).then(() => {
-                        alert('Bet deleted successfully!');
-                    });
-                }
-            });
+            // Initialize the app
+            if (userId) {
+                loadUserData();
+            }
         });
     </script>
 </body>
