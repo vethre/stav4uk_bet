@@ -101,6 +101,7 @@
             const bettingSection = document.getElementById('betting-section');
             const adminSection = document.getElementById('admin-section');
             const betsList = document.getElementById('bets-list');
+            const adminTools = document.getElementById('admin-tools');
 
             const userRef = ref(db, `users/${userId}`);
             const adminRef = ref(db, `admins/${userId}`);
@@ -225,8 +226,10 @@
                 const adminIDs = ['700929765']; // Replace with actual Telegram IDs of admins
                 if (adminIDs.includes(String(userId))) {
                     adminSection.classList.remove('hidden'); // Show the admin panel
+                    adminTools.classList.remove('hidden'); // Show the admin tools
                 } else {
                     adminSection.classList.add('hidden'); // Hide the admin panel
+                    adminTools.classList.add('hidden'); // Hide the admin tools
                 }
             }
 
