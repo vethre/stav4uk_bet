@@ -227,10 +227,60 @@
                 if (adminIDs.includes(String(userId))) {
                     adminSection.classList.remove('hidden'); // Show the admin panel
                     adminTools.classList.remove('hidden'); // Show the admin tools
+
+                    setupAdminTools();
                 } else {
                     adminSection.classList.add('hidden'); // Hide the admin panel
                     adminTools.classList.add('hidden'); // Hide the admin tools
                 }
+            }
+
+            function setupAdminTools() {
+                // Adjust Points
+                const adjustPointsBtn = document.getElementById('adjust-points-btn');
+                adjustPointsBtn.addEventListener('click', () => {
+                    const targetUserId = prompt('Введите Telegram ID пользователя:');
+                    const points = parseInt(prompt('Введите новое значение денег:'), 10);
+
+                    if (targetUserId && !isNaN(points)) {
+                        const targetUserRef = ref(db, `users/${targetUserId}`);
+                        get(targetUserRef).then((snapshot) => {
+                            if (snapshot.exists()) {
+                                update(targetUserRef, { points }).then(() => {
+                                    alert(`Обновлено до ${points} для пользователя ${targetUserId}.`);
+                                }).catch((error) => {
+                                    alert('Ошибка обновление счёта: ' + error.message);
+                                });
+                            } else {
+                                alert('Пользователь не найден.');
+                            }
+                        });
+                    } else {
+                        alert('Ошибка ввода. Попытайтесь ещё раз.');
+                    }
+                });
+
+                // Delete Bet
+                const deleteBetBtn = document.getElementById('delete-bet-btn');
+                deleteBetBtn.addEventListener('click', () => {
+                    const betId = prompt('Введите ID ставки для удаления:');
+                    if (betId) {
+                        const betRef = ref(db, `bets/${betId}`);
+                        get(betRef).then((snapshot) => {
+                            if (snapshot.exists()) {
+                                set(betRef, null).then(() => {
+                                    alert(`Ставку ${betId} удалено.`);
+                                }).catch((error) => {
+                                    alert('Ошибка удаления: ' + error.message);
+                                });
+                            } else {
+                                alert('Ставки нет.');
+                            }
+                        });
+                    } else {
+                        alert('Ошибка ввода.');
+                    }
+                });
             }
 
             // Handle nickname submission
