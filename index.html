@@ -216,9 +216,14 @@
                         ]).then(() => {
                             alert('Ставку сделано!');
                         }).catch(error => {
+                            console.error('Ошибка ставки:', error);
                             alert('Ошибка ставки: ' + error.message);
                         });
+                    }).catch(error => {
+                        console.error('Ошибка получения данных ставки:', error);
                     });
+                }).catch(error => {
+                    console.error('Ошибка получения данных пользователя:', error);
                 });
             }
 
