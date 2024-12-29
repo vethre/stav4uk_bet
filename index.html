@@ -42,36 +42,36 @@
 <body>
     <div id="app">
         <div id="nickname-section" class="text-center">
-            <h2>Welcome to the Betting App!</h2>
-            <p>Please enter your nickname to get started.</p>
-            <input type="text" id="nickname-input" placeholder="Enter your nickname" class="form-control mb-2">
-            <button id="nickname-submit" class="btn btn-primary w-100">Submit</button>
+            <h2>Добро Пожаловать в VeBet!</h2>
+            <p>Пожалуйста, введите свой никнейм.</p>
+            <input type="text" id="nickname-input" placeholder="Введите никнейм" class="form-control mb-2">
+            <button id="nickname-submit" class="btn btn-primary w-100">Продолжить</button>
         </div>
 
         <div id="betting-section" class="hidden">
-            <h2>Bets</h2>
-            <div id="bets-list">Loading...</div>
+            <h2>Ставки</h2>
+            <div id="bets-list">Загрузка...</div>
         </div>
 
         <div id="admin-section" class="hidden">
-            <h3>Admin Panel</h3>
+            <h3>Панель админа</h3>
             <form id="admin-form">
-                <input type="text" id="bet-name" placeholder="Bet Name" class="form-control mb-2">
-                <input type="text" id="option-a" placeholder="Option A Text" class="form-control mb-2">
-                <input type="text" id="option-b" placeholder="Option B Text" class="form-control mb-2">
-                <button type="submit" class="btn btn-success w-100">Create Bet</button>
+                <input type="text" id="bet-name" placeholder="Назв. ставки" class="form-control mb-2">
+                <input type="text" id="option-a" placeholder="Назв. варианта А" class="form-control mb-2">
+                <input type="text" id="option-b" placeholder="Назв. варианта Б" class="form-control mb-2">
+                <button type="submit" class="btn btn-success w-100">Создать ставку</button>
             </form>
         </div>
 
         <div id="user-info" class="mb-3 text-center">
             <h4 id="nickname-display"></h4>
-            <p id="points-display">Points: 0</p>
+            <p id="points-display">Денег: 0</p>
         </div>
 
         <div id="admin-tools" class="hidden">
-            <h3>Admin Tools</h3>
-            <button id="adjust-points-btn" class="btn btn-warning mb-2">Adjust Points</button>
-            <button id="delete-bet-btn" class="btn btn-danger mb-2">Delete Bet</button>
+            <h3>Инструменты</h3>
+            <button id="adjust-points-btn" class="btn btn-warning mb-2">Редактировать счёт</button>
+            <button id="delete-bet-btn" class="btn btn-danger mb-2">Удалить ставку</button>
         </div>
     </div>
 
@@ -110,8 +110,8 @@
                 onValue(userRef, (snapshot) => {
                     if (snapshot.exists()) {
                         const userData = snapshot.val();
-                        document.getElementById('nickname-display').textContent = `Nickname: ${userData.nickname}`;
-                        document.getElementById('points-display').textContent = `Points: ${userData.points}`;
+                        document.getElementById('nickname-display').textContent = `Никнейм: ${userData.nickname}`;
+                        document.getElementById('points-display').textContent = `Денег: ${userData.points}`;
                         nicknameSection.classList.add('hidden');
                         bettingSection.classList.remove('hidden');
                         updateBets();
@@ -133,12 +133,12 @@
                             betElement.innerHTML = `
                                 <div>
                                     <h5>${bet.name}</h5>
-                                    <p>Option A: ${bet.optionAText} (Coef: ${bet.coefficientA.toFixed(2)})</p>
-                                    <p>Option B: ${bet.optionBText} (Coef: ${bet.coefficientB.toFixed(2)})</p>
+                                    <p>Вариант A: ${bet.optionAText}<br>(Кэф: ${bet.coefficientA.toFixed(2)})</p>
+                                    <p>Вариант Б: ${bet.optionBText}<br>(Кэф: ${bet.coefficientB.toFixed(2)})</p>
                                 </div>
                                 <div>
-                                    <button id="bet-a-${betId}" class="btn btn-primary btn-sm">Bet A</button>
-                                    <button id="bet-b-${betId}" class="btn btn-secondary btn-sm">Bet B</button>
+                                    <button id="bet-a-${betId}" class="btn btn-primary btn-sm">Поставить на А</button>
+                                    <button id="bet-b-${betId}" class="btn btn-secondary btn-sm">Поставить на Б</button>
                                 </div>
                             `;
                             betsList.appendChild(betElement);
@@ -151,23 +151,23 @@
                             betBButton.addEventListener('click', () => placeBet(betId, 'B'));
                         });
                     } else {
-                        betsList.innerHTML = '<p>No bets available</p>';
+                        betsList.innerHTML = '<p>На данный момент ставок нет.</p>';
                     }
                 });
             }
 
             // Place a bet
             function placeBet(betId, option) {
-                const pointsToBet = parseInt(prompt('Enter the number of points to bet:'), 10);
+                const pointsToBet = parseInt(prompt('Введите действительное число для ставки:'), 10);
                 if (!pointsToBet || pointsToBet <= 0) {
-                    alert('Invalid points value.');
+                    alert('ДЕЙСТВИТЕЛЬНОЕ ЧИСЛО.');
                     return;
                 }
 
                 get(userRef).then((userSnapshot) => {
                     const userData = userSnapshot.val();
                     if (userData.points < pointsToBet) {
-                        alert('You do not have enough points.');
+                        alert('У тебя нет столько денег.');
                         return;
                     }
 
@@ -179,7 +179,7 @@
 
                         // Check if the user has already placed a bet on this betId
                         if (betData.user_bets && betData.user_bets[userId]) {
-                            alert('You have already placed a bet on this option.');
+                            alert('Ты уже сделал свою ставку.');
                             return;
                         }
 
@@ -212,9 +212,9 @@
                             set(betRef, updatedBet),                       // Update the bet data
                             set(userBetRef, userBetData)                  // Save the user's bet in user_bets
                         ]).then(() => {
-                            alert('Bet placed successfully!');
+                            alert('Ставку сделано!');
                         }).catch(error => {
-                            alert('Error placing bet: ' + error.message);
+                            alert('Ошибка ставки: ' + error.message);
                         });
                     });
                 });
@@ -222,13 +222,12 @@
 
             // Check if the user is admin
             function checkAdminStatus() {
-                onValue(adminRef, (snapshot) => {
-                    if (snapshot.exists()) {
-                        adminSection.classList.remove('hidden'); // Show the admin panel
-                    } else {
-                        adminSection.classList.add('hidden'); // Hide the admin panel if not admin
-                    }
-                });
+                const adminIDs = ['700929765']; // Replace with actual Telegram IDs of admins
+                if (adminIDs.includes(String(userId))) {
+                    adminSection.classList.remove('hidden'); // Show the admin panel
+                } else {
+                    adminSection.classList.add('hidden'); // Hide the admin panel
+                }
             }
 
             // Handle nickname submission
@@ -241,7 +240,7 @@
                         checkAdminStatus();
                     });
                 } else {
-                    alert('Please enter a valid nickname.');
+                    alert('Введите дествительный никнейм.');
                 }
             });
 
@@ -266,11 +265,11 @@
                         coefficientA: 1,
                         coefficientB: 1
                     }).then(() => {
-                        alert('Bet created successfully!');
+                        alert('Ставку создано успешно!');
                         document.getElementById('admin-form').reset();
                     });
                 } else {
-                    alert('All fields are required!');
+                    alert('Все поля должны быть заполнены!');
                 }
             });
 
