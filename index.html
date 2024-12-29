@@ -196,8 +196,17 @@
 
                         // Update the coefficients based on the new total bets
                         const totalBets = updatedBet.optionA_bets + updatedBet.optionB_bets;
-                        updatedBet.coefficientA = updatedBet.optionA_bets > 0 ? totalBets / updatedBet.optionA_bets : 1;
-                        updatedBet.coefficientB = updatedBet.optionB_bets > 0 ? totalBets / updatedBet.optionB_bets : 1;
+                        if (updatedBet.optionA_bets > 0) {
+                            updatedBet.coefficientA = totalBets / updatedBet.optionA_bets;
+                        } else {
+                            updatedBet.coefficientA = 1; // Avoid division by zero
+                        }
+
+                        if (updatedBet.optionB_bets > 0) {
+                            updatedBet.coefficientB = totalBets / updatedBet.optionB_bets;
+                        } else {
+                            updatedBet.coefficientB = 1; // Avoid division by zero
+                        }
                         console.log('Total bets:', totalBets);
                         console.log('Updated Bet (coefficients):', updatedBet.coefficientA, updatedBet.coefficientB);
                         // Save the updated bet data (option bets and coefficients)
