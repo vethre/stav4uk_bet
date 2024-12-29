@@ -279,9 +279,8 @@
                     if (snapshot.exists()) {
                         nicknameSection.classList.add('hidden');
                         bettingSection.classList.remove('hidden');
-                        updateUserInfo();
-                        loadBets();
-  // Check if the user is an admin
+                        loadUserData();
+                        updateBets();
                     }
                 });
             }
