@@ -337,6 +337,7 @@
 
                         // Mark the bet as completed
                         updates[`bets/${betId}/result`] = resultOption;
+                        updates[`bets/${betId}`] = null;
 
                         // Commit all updates
                         update(ref(db), updates).then(() => {
