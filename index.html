@@ -72,6 +72,7 @@
             <h3>Инструменты</h3>
             <button id="adjust-points-btn" class="btn btn-warning mb-2">Редактировать счёт</button>
             <button id="delete-bet-btn" class="btn btn-danger mb-2">Удалить ставку</button>
+            <button id="end-bet-btn" class="btn btn-success mb-2">Расчитать ставку</button>
         </div>
     </div>
 
@@ -280,6 +281,72 @@
                     } else {
                         alert('Ошибка ввода.');
                     }
+                });
+
+                // End Bet
+                const endBetBtn = document.getElementById('end-bet-btn');
+                endBetBtn.addEventListener('click', () => {
+                    const betId = prompt('Введите ID ставку, которую надо расчитать:');
+                    if (!betId) {
+                        alert('Ложный ID.');
+                        return;
+                    }
+
+                    const resultOption = prompt('Введите исход (A или Б):').toUpperCase();
+                    if (resultOption !== 'A' && resultOption !== 'B') {
+                        alert('Ошибка. Только A или Б.');
+                        return;
+                    }
+
+                    const betRef = ref(db, `bets/${betId}`);
+                    get(betRef).then((snapshot) => {
+                        if (!snapshot.exists()) {
+                            alert('Ставки не найдено.');
+                            return;
+                        }
+
+                        const betData = snapshot.val();
+                        const totalBets = resultOption === 'A' ? betData.optionA_bets : betData.optionB_bets;
+
+                        if (totalBets === 0) {
+                            alert(`Нет ставок на вариант: ${resultOption}.`);
+                            return;
+                        }
+
+                        const userBets = betData.user_bets || {};
+                        const winningCoefficient = resultOption === 'A' ? betData.coefficientA : betData.coefficientB;
+
+                        // Distribute points to winners
+                        const updates = {};
+                        Object.keys(userBets).forEach((userId) => {
+                            const userBet = userBets[userId];
+                            if (userBet.option === resultOption) {
+                                const winnings = Math.round(userBet.points * winningCoefficient);
+                                const userRef = ref(db, `users/${userId}`);
+                                get(userRef).then((userSnapshot) => {
+                                    if (userSnapshot.exists()) {
+                                        const userData = userSnapshot.val();
+                                        const updatedPoints = userData.points + winnings;
+
+                                        // Queue update for the user
+                                        updates[`users/${userId}/points`] = updatedPoints;
+                                    }
+                                });
+                            }
+                        });
+
+                        // Mark the bet as completed
+                        updates[`bets/${betId}/result`] = resultOption;
+
+                        // Commit all updates
+                        update(ref(db), updates).then(() => {
+                            alert(`Ставку ${betId} окончено. Вариант ${resultOption} победил.`);
+                        }).catch((error) => {
+                            alert('Ошибка конца: ' + error.message);
+                        });
+                    }).catch((error) => {
+                        alert('Ошибка расчёта: ' + error.message);
+                    });
                 });
             }
 
