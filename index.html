@@ -221,15 +221,15 @@
             }
 
             // Check if the user is admin
-            const adminsRef = ref(db, 'admins');
-            get(adminsRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const admins = snapshot.val();
-                    if (admins[userId]) {
-                        adminSection.classList.remove('hidden');  // Show the admin panel
+            function checkAdminStatus() {
+                onValue(adminRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        adminSection.classList.remove('hidden'); // Show the admin panel
+                    } else {
+                        adminSection.classList.add('hidden'); // Hide the admin panel if not admin
                     }
-                }
-            });
+                });
+            }
 
             // Handle nickname submission
             document.getElementById('nickname-submit').addEventListener('click', () => {
@@ -238,6 +238,7 @@
                 if (nickname) {
                     set(userRef, { nickname, points: 1000 }).then(() => {
                         loadUserData();
+                        checkAdminStatus();
                     });
                 } else {
                     alert('Please enter a valid nickname.');
@@ -281,6 +282,7 @@
                         bettingSection.classList.remove('hidden');
                         loadUserData();
                         updateBets();
+                        checkAdminStatus();
                     }
                 });
             }
