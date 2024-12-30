@@ -322,23 +322,22 @@
                         const userBets = betData.user_bets || {};
                         const winningCoefficient = resultOption === 'A' ? betData.coefficientA : betData.coefficientB;
 
-                        // First, update user points
-                        const userUpdates = {};
-                        const betUpdates = {}; // Separate updates for bet data
+                        // First, update user points using transactions
+                        const betUpdates = {}; // Updates for bet data
 
                         Object.keys(userBets).forEach((userId) => {
                             const userBet = userBets[userId];
                             if (userBet.option === resultOption) {
                                 const winnings = Math.round(userBet.points * winningCoefficient);
-                                const userRef = ref(db, `users/${userId}`);
-                                get(userRef).then((userSnapshot) => {
-                                    if (userSnapshot.exists()) {
-                                        const userData = userSnapshot.val();
-                                        const updatedPoints = userData.points + winnings;
 
-                                        // Queue update for the user points
-                                        userUpdates[`users/${userId}/points`] = updatedPoints;
-                                    }
+                                // Use transaction for atomic update of user points
+                                const userRef = ref(db, `users/${userId}/points`);
+                                transaction(userRef, (currentPoints) => {
+                                    return (currentPoints || 0) + winnings;  // Atomic update
+                                }).then(() => {
+                                    console.log(`User ${userId} points successfully updated.`);
+                                }).catch((error) => {
+                                    console.log(`Error updating points for user ${userId}: ` + error.message);
                                 });
                             }
                         });
@@ -346,25 +345,25 @@
                         // Now handle the bet result update
                         betUpdates[`bets/${betId}/result`] = resultOption;
 
-                        // First commit the user points update
-                        update(ref(db), userUpdates).then(() => {
-                            // After user points update, show a confirmation
+                        // First commit the bet result update
+                        update(ref(db), betUpdates).then(() => {
+                            // After bet result update, show a confirmation
                             alert(`Ставку ${betId} окончено. Вариант ${resultOption} победил.`);
 
-                            // Now, delay before deleting the bet (5 seconds)
+                            // Increase delay to 10 seconds for more buffer time
                             setTimeout(() => {
-                                // Commit bet deletion after delay (ensure this is separate)
-                                betUpdates[`bets/${betId}`] = null;  // Delete the bet after 5 seconds
+                                // Commit bet deletion after a longer delay (10 seconds)
+                                betUpdates[`bets/${betId}`] = null;  // Delete the bet after the delay
 
-                                // Commit the bet result update and bet deletion
+                                // Commit the bet deletion
                                 update(ref(db), betUpdates).then(() => {
-                                    console.log(`Bet ${betId} successfully deleted after 5 seconds.`);
+                                    console.log(`Bet ${betId} successfully deleted after 10 seconds.`);
                                 }).catch((error) => {
                                     alert('Ошибка удаления ставки: ' + error.message);
                                 });
-                            }, 10000);  // Delay of 5000 milliseconds (5 seconds)
+                            }, 10000);  // Delay of 10000 milliseconds (10 seconds)
                         }).catch((error) => {
-                            alert('Ошибка обновления очков пользователей: ' + error.message);
+                            alert('Ошибка обновления результата ставки: ' + error.message);
                         });
                     }).catch((error) => {
                         alert('Ошибка расчёта: ' + error.message);
