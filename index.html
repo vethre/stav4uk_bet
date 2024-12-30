@@ -347,15 +347,19 @@
 
                         // First commit the user points update
                         update(ref(db), userUpdates).then(() => {
-                            // After user points update, now delete the bet
-                            betUpdates[`bets/${betId}`] = null;  // Deleting the bet after processing
+                            alert(`Ставку ${betId} окончено. Вариант ${resultOption} победил.`);
 
-                            // Now commit the bet result update and bet deletion
-                            update(ref(db), betUpdates).then(() => {
-                                alert(`Ставку ${betId} окончено. Вариант ${resultOption} победил.`);
-                            }).catch((error) => {
-                                alert('Ошибка конца: ' + error.message);
-                            });
+                            setTimeout(() => {
+                                // After user points update, now delete the bet
+                                betUpdates[`bets/${betId}`] = null;  // Deleting the bet after processing
+
+                                // Now commit the bet result update and bet deletion
+                                update(ref(db), betUpdates).then(() => {
+                                    console.log(`Ставка ${betId} успешно удалена после 5 секунд.`);
+                                }).catch((error) => {
+                                    alert('Ошибка конца: ' + error.message);
+                                });
+                            }, 5000);
                         }).catch((error) => {
                             alert('Ошибка расчёта: ' + error.message);
                         });
