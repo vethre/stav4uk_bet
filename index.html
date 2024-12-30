@@ -322,8 +322,8 @@
                         const userBets = betData.user_bets || {};
                         const winningCoefficient = resultOption === 'A' ? betData.coefficientA : betData.coefficientB;
 
-                        // Distribute points to winners
-                        const updates = {};
+                        // First, update user points
+                        const userUpdates = {};
                         Object.keys(userBets).forEach((userId) => {
                             const userBet = userBets[userId];
                             if (userBet.option === resultOption) {
@@ -335,27 +335,34 @@
                                         const updatedPoints = userData.points + winnings;
 
                                         // Queue update for the user
-                                        updates[`users/${userId}/points`] = updatedPoints;
+                                        userUpdates[`users/${userId}/points`] = updatedPoints;
                                     }
                                 });
                             }
                         });
 
-                        // Mark the bet as completed
-                        updates[`bets/${betId}/result`] = resultOption;
-                        updates[`bets/${betId}`] = null;
+                        // Now update the bet result separately
+                        const betUpdates = {};
+                        betUpdates[`bets/${betId}/result`] = resultOption;
 
-                        // Commit all updates
-                        update(ref(db), updates).then(() => {
-                            alert(`Ставку ${betId} окончено. Вариант ${resultOption} победил.`);
+                        // First commit the user points update
+                        update(ref(db), userUpdates).then(() => {
+                            // After user points update, now delete the bet
+                            betUpdates[`bets/${betId}`] = null;  // Deleting the bet after processing
+
+                            // Now commit the bet result update and bet deletion
+                            update(ref(db), betUpdates).then(() => {
+                                alert(`Ставку ${betId} окончено. Вариант ${resultOption} победил.`);
+                            }).catch((error) => {
+                                alert('Ошибка конца: ' + error.message);
+                            });
                         }).catch((error) => {
-                            alert('Ошибка конца: ' + error.message);
+                            alert('Ошибка расчёта: ' + error.message);
                         });
                     }).catch((error) => {
                         alert('Ошибка расчёта: ' + error.message);
                     });
                 });
-            }
 
             // Handle nickname submission
             document.getElementById('nickname-submit').addEventListener('click', () => {
