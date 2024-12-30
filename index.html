@@ -322,48 +322,42 @@
                         const userBets = betData.user_bets || {};
                         const winningCoefficient = resultOption === 'A' ? betData.coefficientA : betData.coefficientB;
 
-                        // First, update user points using transactions
-                        const betUpdates = {}; // Updates for bet data
-
+                        // Distribute points to winners and update bet result
+                        const updates = {};
                         Object.keys(userBets).forEach((userId) => {
                             const userBet = userBets[userId];
                             if (userBet.option === resultOption) {
                                 const winnings = Math.round(userBet.points * winningCoefficient);
-
-                                // Use transaction for atomic update of user points
-                                const userRef = ref(db, `users/${userId}/points`);
-                                runTransaction(userRef, (currentPoints) => {
-                                    return (currentPoints || 0) + winnings;  // Atomic update
+                                const userRef = ref(db, `users/${userId}`);
+                                
+                                // Using runTransaction for atomic update of points
+                                runTransaction(userRef, (userData) => {
+                                    if (userData) {
+                                        userData.points += winnings;
+                                    }
+                                    return userData;  // Return the modified data
                                 }).then(() => {
-                                    console.log(`User ${userId} points successfully updated.`);
+                                    // After transaction completes, update bet result
+                                    updates[`bets/${betId}/result`] = resultOption;
+                                    // Mark bet as completed (hide the buttons)
+                                    const betElement = document.getElementById(betId);
+                                    if (betElement) {
+                                        const betButtons = betElement.querySelectorAll('.bet-buttons');
+                                        betButtons.forEach((button) => {
+                                            button.style.display = 'none';  // or use button.disabled = true to disable
+                                        });
+                                    }
+                                    
+                                    // Commit updates
+                                    update(ref(db), updates).then(() => {
+                                        alert(`Ставку ${betId} окончено. Вариант ${resultOption} победил.`);
+                                    }).catch((error) => {
+                                        alert('Ошибка конца: ' + error.message);
+                                    });
                                 }).catch((error) => {
-                                    console.log(`Error updating points for user ${userId}: ` + error.message);
+                                    alert('Ошибка транзакции: ' + error.message);
                                 });
                             }
-                        });
-
-                        // Now handle the bet result update
-                        betUpdates[`bets/${betId}/result`] = resultOption;
-
-                        // First commit the bet result update
-                        update(ref(db), betUpdates).then(() => {
-                            // After bet result update, show a confirmation
-                            alert(`Ставку ${betId} окончено. Вариант ${resultOption} победил.`);
-
-                            // Increase delay to 10 seconds for more buffer time
-                            setTimeout(() => {
-                                // Commit bet deletion after a longer delay (10 seconds)
-                                betUpdates[`bets/${betId}`] = null;  // Delete the bet after the delay
-
-                                // Commit the bet deletion
-                                update(ref(db), betUpdates).then(() => {
-                                    console.log(`Bet ${betId} successfully deleted after 10 seconds.`);
-                                }).catch((error) => {
-                                    alert('Ошибка удаления ставки: ' + error.message);
-                                });
-                            }, 10000);  // Delay of 10000 milliseconds (10 seconds)
-                        }).catch((error) => {
-                            alert('Ошибка обновления результата ставки: ' + error.message);
                         });
                     }).catch((error) => {
                         alert('Ошибка расчёта: ' + error.message);
