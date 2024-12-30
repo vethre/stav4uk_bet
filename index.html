@@ -332,7 +332,7 @@
 
                                 // Use transaction for atomic update of user points
                                 const userRef = ref(db, `users/${userId}/points`);
-                                transaction(userRef, (currentPoints) => {
+                                runTransaction(userRef, (currentPoints) => {
                                     return (currentPoints || 0) + winnings;  // Atomic update
                                 }).then(() => {
                                     console.log(`User ${userId} points successfully updated.`);
