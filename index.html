@@ -200,11 +200,7 @@
                         updatedBet.coefficientB = totalBets / updatedBet.optionB_bets || 1;
                         console.log('Total bets:', totalBets);
                         console.log('Updated Bet (coefficients):', updatedBet.coefficientA, updatedBet.coefficientB);
-
-                        const updates = {};
-                        updates[`bets/${betId}/coefficientA`] = coefficientA;
-                        updates[`bets/${betId}/coefficientB`] = coefficientB;
-                        if (!isFinite(coefficientA) || !isFinite(coefficientB)) {
+                        if (!isFinite(updatedBet.coefficientA) || !isFinite(updatedBet.coefficientB)) {
                             alert('Ошибка: неверные коэффициенты для ставки.');
                             return;
                         }
