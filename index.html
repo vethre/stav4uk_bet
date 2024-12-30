@@ -205,6 +205,10 @@
                             alert('Ошибка: неверные коэффициенты для ставки.');
                             return;
                         }
+
+                        const updates = {};
+                        updates[`bets/${betId}/coefficientA`] = coefficientA;
+                        updates[`bets/${betId}/coefficientB`] = coefficientB;
                         // Save the updated bet data (option bets and coefficients)
                         const updatedUser = { ...userData, points: userData.points - pointsToBet };
 
