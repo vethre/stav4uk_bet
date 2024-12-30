@@ -324,6 +324,8 @@
 
                         // First, update user points
                         const userUpdates = {};
+                        const betUpdates = {}; // Separate updates for bet data
+
                         Object.keys(userBets).forEach((userId) => {
                             const userBet = userBets[userId];
                             if (userBet.option === resultOption) {
@@ -334,34 +336,35 @@
                                         const userData = userSnapshot.val();
                                         const updatedPoints = userData.points + winnings;
 
-                                        // Queue update for the user
+                                        // Queue update for the user points
                                         userUpdates[`users/${userId}/points`] = updatedPoints;
                                     }
                                 });
                             }
                         });
 
-                        // Now update the bet result separately
-                        const betUpdates = {};
+                        // Now handle the bet result update
                         betUpdates[`bets/${betId}/result`] = resultOption;
 
                         // First commit the user points update
                         update(ref(db), userUpdates).then(() => {
+                            // After user points update, show a confirmation
                             alert(`Ставку ${betId} окончено. Вариант ${resultOption} победил.`);
 
+                            // Now, delay before deleting the bet (5 seconds)
                             setTimeout(() => {
-                                // After user points update, now delete the bet
-                                betUpdates[`bets/${betId}`] = null;  // Deleting the bet after processing
+                                // Commit bet deletion after delay (ensure this is separate)
+                                betUpdates[`bets/${betId}`] = null;  // Delete the bet after 5 seconds
 
-                                // Now commit the bet result update and bet deletion
+                                // Commit the bet result update and bet deletion
                                 update(ref(db), betUpdates).then(() => {
-                                    console.log(`Ставка ${betId} успешно удалена после 5 секунд.`);
+                                    console.log(`Bet ${betId} successfully deleted after 5 seconds.`);
                                 }).catch((error) => {
-                                    alert('Ошибка конца: ' + error.message);
+                                    alert('Ошибка удаления ставки: ' + error.message);
                                 });
-                            }, 5000);
+                            }, 5000);  // Delay of 5000 milliseconds (5 seconds)
                         }).catch((error) => {
-                            alert('Ошибка расчёта: ' + error.message);
+                            alert('Ошибка обновления очков пользователей: ' + error.message);
                         });
                     }).catch((error) => {
                         alert('Ошибка расчёта: ' + error.message);
